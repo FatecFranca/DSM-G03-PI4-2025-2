@@ -1,7 +1,7 @@
 ## Rodando front e back localmente
 
 # Back-end
-## Para rodar o projeto basta:
+## Para rodar o projeto:
 
 ### cd aero_sence_back
 ### npm install
@@ -10,7 +10,7 @@
 
 
 # Front-end
-## Para rodar o projeto basta:
+## Para rodar o projeto:
 
 ### cd aero_sence_front
 ### npm install
