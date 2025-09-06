@@ -1,1 +1,17 @@
-# DSM-G03-PI4-2025-2
+## Rodando front e back localmente
+
+### Back-end
+# Para rodar o projeto basta:
+
+## cd aero_sence_back
+## npm install
+## npm run start
+## API roda em: http://localhost:3000
+
+
+### Front-end
+# Para rodar o projeto basta:
+
+## cd aero_sence_front
+## npm install
+## npm run dev
