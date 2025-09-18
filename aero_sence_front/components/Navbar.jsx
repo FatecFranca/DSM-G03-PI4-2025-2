@@ -1,22 +1,17 @@
 import React from 'react';
-import { Navbar, Nav, Container } from 'react-bootstrap'; // 1. Importe o Container
-// Se estiver usando react-router, importe o Link
-// import { Link } from 'react-router-dom';
-import logo from '../assets/logo.png';
+import { Navbar, Nav, Container } from 'react-bootstrap';
+import { Link } from 'react-router-dom';
+import logo from '../src/assets/logo.png';
 
 const AppNavbar = () => {
   return (
-    // 2. Remova o style inline e as classes de largura desnecessárias.
-    // A Navbar por padrão já ocupa 100% da largura.
-    // Adicionei fixed="top" como uma opção comum e útil.
-    <Navbar bg="light" expand="lg" className="shadow-sm" fixed="top">
-      {/* 3. Adicione um <Container> para alinhar e conter o seu logo e links */}
-      <Container>
+    <Navbar bg="light" expand="lg" className="shadow-sm custom-navbar py-0" fixed="top">
+      <Container fluid className="navbar-container">
         <Navbar.Brand href="/">
           <img
             src={logo}
-            height="80" // 4. Defina uma altura razoável em vez de 0
-            className="d-inline-block align-top"
+            height="64" /* Aumentei o tamanho da logo */
+            className="d-inline-block align-top navbar-logo"
             alt="Logo"
             style={{ objectFit: 'contain' }}
           />
@@ -24,9 +19,9 @@ const AppNavbar = () => {
         <Navbar.Toggle aria-controls="basic-navbar-nav" />
         <Navbar.Collapse id="basic-navbar-nav">
           <Nav className="ms-auto">
-            <Nav.Link href="/" className="fw-semibold">Home</Nav.Link>
-            <Nav.Link href="/historico" className="fw-semibold">Histórico</Nav.Link>
-            <Nav.Link href="/config" className="fw-semibold">Settings</Nav.Link>
+            <Nav.Link as={Link} to="/" className="fw-semibold">Login</Nav.Link>
+            <Nav.Link as={Link} to="/dashboard" className="fw-semibold">Dashboard</Nav.Link>
+            <Nav.Link as={Link} to="/config" className="fw-semibold">Configurações</Nav.Link>
           </Nav>
         </Navbar.Collapse>
       </Container>

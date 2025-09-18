@@ -40,3 +40,12 @@
 .read-the-docs {
   color: #888;
 }
+
+.navbar-container {
+  padding: 0 1.5rem;
+}
+
+.custom-navbar {
+  padding-top: 0.25rem; 
+  padding-bottom: 0.25rem; 
+}
