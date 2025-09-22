@@ -2,21 +2,13 @@ import React, { useState } from 'react';
 import { Navbar, Nav, Container, Dropdown } from 'react-bootstrap';
 import { House, Grid3x3Gap, Gear, ClockHistory, PersonCircle } from 'react-bootstrap-icons';
 import lgHorizontal from '../src/assets/lg_horizontal.png';
+import { Link } from 'react-router-dom';
 
 const CustomNavbar = ({ onToggleSidebar, currentPage, setCurrentPage, userName = "Usuário" }) => {
   const [showUserMenu, setShowUserMenu] = useState(false);
 
   const handleLinkClick = (linkName) => {
     setCurrentPage(linkName);
-    if (linkName === 'configuracoes') {
-      window.location.assign('/Config');
-    }
-    if (linkName === 'dashboard') {
-      window.location.assign('/Dashboard');
-    }
-    if (linkName === 'historico') {
-      window.location.assign('/Historico');
-    }
   };
 
   const handleLogout = () => {
@@ -93,9 +85,10 @@ const CustomNavbar = ({ onToggleSidebar, currentPage, setCurrentPage, userName =
         <Navbar.Collapse id="basic-navbar-nav">
           <Nav className="ms-auto align-items-center">
             <Nav.Link
-              href="#dashboard"
+              as={Link}
+              to="/Dashboard"
               className={`nav-link-custom ${currentPage === 'dashboard' ? 'active' : ''}`}
-              onClick={e => { e.preventDefault(); handleLinkClick('dashboard'); }}
+              onClick={() => handleLinkClick('dashboard')}
               style={{
                 color: currentPage === 'dashboard' ? '#0d6efd' : '#6c757d',
                 fontWeight: '500',
@@ -111,9 +104,10 @@ const CustomNavbar = ({ onToggleSidebar, currentPage, setCurrentPage, userName =
             </Nav.Link>
 
             <Nav.Link
-              href="#historico"
+              as={Link}
+              to="/Historico"
               className={`nav-link-custom ${currentPage === 'historico' ? 'active' : ''}`}
-              onClick={e => { e.preventDefault(); handleLinkClick('historico'); }}
+              onClick={() => handleLinkClick('historico')}
               style={{
                 color: currentPage === 'historico' ? '#0d6efd' : '#6c757d',
                 fontWeight: '500',
@@ -129,9 +123,10 @@ const CustomNavbar = ({ onToggleSidebar, currentPage, setCurrentPage, userName =
             </Nav.Link>
 
             <Nav.Link
-              href="#configuracoes"
+              as={Link}
+              to="/Config"
               className={`nav-link-custom ${currentPage === 'configuracoes' ? 'active' : ''}`}
-              onClick={e => { e.preventDefault(); handleLinkClick('configuracoes'); }}
+              onClick={() => handleLinkClick('configuracoes')}
               style={{
                 color: currentPage === 'configuracoes' ? '#0d6efd' : '#6c757d',
                 fontWeight: '500',

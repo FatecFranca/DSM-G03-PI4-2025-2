@@ -77,11 +77,11 @@ const Config = () => {
       {/* Container responsivo com padding adequado e espaço para Navbar */}
       <Container
         fluid
-        className="px-3 min-vh-100 d-flex align-items-center justify-content-center"
-        style={{ paddingTop: '100px', paddingBottom: '2rem' }}
+        className="px-3 min-vh-100 d-flex flex-column align-items-center justify-content-center"
+        style={{ paddingTop: '100px', paddingBottom: '2rem', display: 'flex', justifyContent: 'center', alignItems: 'center' }}
       >
-        <Row className="justify-content-end w-100">
-          <Col xs={12} sm={11} md={10} lg={9} xl={8} xxl={7} className="ms-auto">
+        <Row className="w-100" style={{ display: 'flex', justifyContent: 'center' }}>
+          <Col xs={12} sm={10} md={8} lg={6} xl={5} xxl={4} style={{ margin: '0 auto' }}>
             
             {/* Alert informativo */}
             <Alert variant="info" className="d-flex align-items-center mb-4 shadow-sm">
