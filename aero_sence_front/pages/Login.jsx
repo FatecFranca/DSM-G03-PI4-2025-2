@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Card, Form, Button, Alert, Spinner, InputGroup } from 'react-bootstrap';
 import { Eye, EyeSlash } from 'react-bootstrap-icons';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../src/styles/Auth.css';
 import logo from '../public/logo.png';
+import { useAuth } from '../src/context/AuthContext'; 
+import api from '../src/services/api'; 
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -12,7 +14,7 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const navigate = useNavigate();
+  const { login } = useAuth(); 
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -24,11 +26,20 @@ const Login = () => {
       setIsLoading(false);
       return;
     }
-    
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    setError('E-mail ou senha inválidos.');
-    setIsLoading(false);
+
+    try {
+      const response = await api.post('/auth/login', {
+        email,
+        password,
+      });
+      
+      const { user, token } = response.data;
+      login(user, token);
+
+    } catch (err) {
+      setError('E-mail ou senha inválidos. Tente novamente.');
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -43,7 +54,6 @@ const Login = () => {
           {error && <Alert variant="danger">{error}</Alert>}
 
           <Form onSubmit={handleSubmit}>
-            {/* ... (Form.Group de email) ... */}
             <Form.Group className="mb-3" controlId="email">
               <Form.Label className="auth-form-label">E-mail</Form.Label>
               <Form.Control 
@@ -54,7 +64,6 @@ const Login = () => {
               />
             </Form.Group>
 
-            {/* ... (Form.Group de senha) ... */}
             <Form.Group className="mb-2" controlId="password">
               <Form.Label className="auth-form-label">Senha</Form.Label>
               <InputGroup>
@@ -74,7 +83,6 @@ const Login = () => {
                 <Link to="/esqueci-senha" className="small auth-link">Esqueci minha senha</Link>
             </div>
 
-            {/* ... (Botão de submit e link de cadastro) ... */}
             <Button type="submit" className="w-100 auth-submit-button" disabled={isLoading}>
               {isLoading ? (
                 <>

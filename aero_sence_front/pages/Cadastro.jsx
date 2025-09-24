@@ -1,17 +1,20 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Card, Form, Button, Alert, Spinner, InputGroup, Row, Col } from 'react-bootstrap';
 import { Eye, EyeSlash } from 'react-bootstrap-icons';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../src/styles/Auth.css';
 import logo from '../public/logo.png';
+import api from '../src/services/api';
 
 const Cadastro = () => {
     const [formData, setFormData] = useState({ nome: '', email: '', password: '', password_confirm: '' });
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const navigate = useNavigate();
 
     const handleChange = (e) => {
         const { id, value } = e.target;
@@ -21,9 +24,11 @@ const Cadastro = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+        setSuccess('');
         setIsLoading(true);
 
         const { nome, email, password, password_confirm } = formData;
+
         if (!nome || !email || !password || !password_confirm) {
             setError('Todos os campos são obrigatórios.');
             setIsLoading(false);
@@ -40,11 +45,29 @@ const Cadastro = () => {
             return;
         }
 
-        // Simulação de chamada de API
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        console.log('Dados do formulário:', formData);
-        setIsLoading(false);
-        // Lógica de sucesso (ex: redirecionar para o dashboard)
+        try {
+            await api.post('/auth/register', {
+                name: nome,
+                email,
+                password,
+            });
+
+            setSuccess('Cadastro realizado com sucesso! A redirecionar para o login...');
+            setTimeout(() => {
+                navigate('/');
+            }, 2000);
+
+        } catch (err) {
+            // ESTA É A PARTE IMPORTANTE
+            if (err.response && err.response.data && err.response.data.message) {
+                setError(err.response.data.message);
+            } else {
+                setError('Não foi possível realizar o cadastro. Verifique a sua ligação à API.');
+            }
+            console.error("Detalhes do erro no cadastro:", err);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -56,19 +79,20 @@ const Cadastro = () => {
                     <h2 className="auth-title">Crie sua conta</h2>
                 </div>
 
+                {/* PROCURE PELA MENSAGEM DE ERRO QUE APARECERÁ AQUI */}
                 {error && <Alert variant="danger">{error}</Alert>}
+                {success && <Alert variant="success">{success}</Alert>}
 
                 <Form onSubmit={handleSubmit}>
+                    {/* ... (o resto do formulário continua igual) ... */}
                     <Form.Group className="mb-3" controlId="nome">
                         <Form.Label className="auth-form-label">Nome</Form.Label>
                         <Form.Control type="text" placeholder="Digite seu nome completo" value={formData.nome} onChange={handleChange} />
                     </Form.Group>
-
                     <Form.Group className="mb-3" controlId="email">
                         <Form.Label className="auth-form-label">E-mail</Form.Label>
                         <Form.Control type="email" placeholder="Digite seu e-mail" value={formData.email} onChange={handleChange} />
                     </Form.Group>
-                    
                     <Row>
                       <Col sm={6}>
                         <Form.Group className="mb-3" controlId="password">
@@ -89,12 +113,10 @@ const Cadastro = () => {
                         </Form.Group>
                       </Col>
                     </Row>
-                    
-                    <Button type="submit" className="w-100 auth-submit-button" disabled={isLoading}>
+                    <Button type="submit" className="w-100 auth-submit-button" disabled={isLoading || !!success}>
                       {isLoading ? <><Spinner as="span" animation="border" size="sm" /> Cadastrando...</> : 'Cadastrar'}
                     </Button>
                 </Form>
-
                 <p className="text-center mt-3 text-secondary">
                     Já tem conta? <Link to="/" className="auth-link">Entrar</Link>
                 </p>

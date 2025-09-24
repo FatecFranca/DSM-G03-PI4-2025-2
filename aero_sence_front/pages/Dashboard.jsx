@@ -29,14 +29,20 @@ const Dashboard = () => {
   // ... (useEffect para buscar dados - sem alterações)
   useEffect(() => {
     const fetchSensorData = async () => {
-      try {
-        const response = await api.get('/sensor');
-        setAirQualityData({ ...response.data, lastUpdate: new Date().toLocaleTimeString('pt-BR') });
-      } catch (error) {
-        console.error('Erro ao buscar dados do sensor:', error);
-        setAirQualityData(prevData => ({...prevData, lastUpdate: new Date().toLocaleTimeString('pt-BR')}));
-      }
-    };
+  try {
+    const response = await api.get('/sensor/latest'); 
+    setAirQualityData({
+      aqi: response.data.aqi.toString(),
+      co2: `${response.data.co2} ppm`,
+      vocs: `${response.data.vocs} ppb`,
+      nox: `${response.data.nox} ppm`,
+      lastUpdate: new Date(response.data.createdAt).toLocaleTimeString('pt-BR')
+    });
+  } catch (error) {
+    console.error('Erro ao buscar dados do sensor:', error);
+    // ...
+  }
+};
     fetchSensorData();
     const interval = setInterval(fetchSensorData, 30000);
     return () => clearInterval(interval);

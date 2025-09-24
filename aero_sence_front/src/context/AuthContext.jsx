@@ -1,33 +1,39 @@
 import React, { createContext, useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
+import api from '../services/api';
 
-// 1. Cria o Contexto
 const AuthContext = createContext(null);
 
-// 2. Cria o Provedor do Contexto
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState({ name: 'Usuário Exemplo' });
+  const [user, setUser] = useState(null);
   const navigate = useNavigate();
 
-  // Função de login (a ser chamada na tela de Login)
-  const login = (userData) => {
+  const login = (userData, token) => {
+    localStorage.setItem('authToken', token);
+    api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     setUser(userData);
     navigate('/dashboard');
   };
-  
-  // Função de logout
+
   const logout = () => {
-    // Limpa os dados do usuário
     setUser(null);
-    navigate('/'); // Redireciona para a tela de login
+    localStorage.removeItem('authToken');
+    delete api.defaults.headers.common['Authorization'];
+    navigate('/');
   };
 
-  const value = { user, login, logout };
+  // --- NOVA FUNÇÃO ADICIONADA ---
+  // Esta função irá permitir que outras partes da aplicação atualizem o estado do utilizador
+  const updateUser = (newUserData) => {
+    setUser(prevUser => ({ ...prevUser, ...newUserData }));
+  };
+
+
+  const value = { user, login, logout, updateUser };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-// 3. Cria um hook customizado para facilitar o uso do contexto
 export const useAuth = () => {
   return useContext(AuthContext);
 };
