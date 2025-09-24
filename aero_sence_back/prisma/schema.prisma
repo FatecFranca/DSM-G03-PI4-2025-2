@@ -16,6 +16,8 @@ model User {
   password  String   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  resetPasswordToken       String?   @unique
+  resetPasswordTokenExpiry DateTime?
 }
 
 // Modelo para os dados dos sensores

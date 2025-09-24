@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../services/prisma.js';
 
-// Guarda uma nova leitura de sensor no banco de dados
 export const createSensorData = async (req: Request, res: Response) => {
     const { aqi, co2, vocs, nox } = req.body;
 

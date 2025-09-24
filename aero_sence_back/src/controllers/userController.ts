@@ -3,7 +3,6 @@ import prisma from '../services/prisma.js';
 import { AuthRequest } from '../middleware/authMiddleware.js';
 import bcrypt from 'bcryptjs';
 
-// Busca o perfil do utilizador logado
 export const getUserProfile = async (req: AuthRequest, res: Response) => {
     try {
         const user = await prisma.user.findUnique({

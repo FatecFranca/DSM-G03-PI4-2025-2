@@ -5,6 +5,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import '../src/styles/Auth.css'; 
 import logo from '../public/logo.png';
 import { ArrowLeft } from 'react-bootstrap-icons';
+import api from '../src/services/api';
 
 const EsqueciSenha = () => {
   const [email, setEmail] = useState('');
@@ -24,13 +25,15 @@ const EsqueciSenha = () => {
       return;
     }
 
-    // Simulação de chamada de API para recuperação de senha
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Lógica de sucesso/falha
-    // Para este exemplo, vamos sempre mostrar sucesso
-    setSuccess(`Um e-mail de recuperação foi enviado para ${email}, caso ele esteja cadastrado em nosso sistema.`);
-    setIsLoading(false);
+    try {
+      // Faz a chamada real para a API
+      const response = await api.post('/auth/forgot-password', { email });
+      setSuccess(response.data.message);
+    } catch (err) {
+      setError('Ocorreu um erro. Tente novamente.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -56,14 +59,14 @@ const EsqueciSenha = () => {
                 placeholder="Digite o e-mail cadastrado" 
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                disabled={!!success} // Desabilita o campo após o sucesso
+                disabled={!!success}
               />
             </Form.Group>
 
             <Button type="submit" className="w-100 auth-submit-button" disabled={isLoading || !!success}>
               {isLoading ? (
                 <>
-                  <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" />
+                  <Spinner as="span" animation="border" size="sm" />
                   <span className="ms-2">Enviando...</span>
                 </>
               ) : (
