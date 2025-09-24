@@ -1,286 +1,140 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Card,
-  Container,
-  Row,
-  Col,
-  Badge,
-  ProgressBar
-} from 'react-bootstrap';
-import {
-  CloudFog,
-  Wind,
-  Thermometer,
-  Droplet,
-  Activity
-} from 'react-bootstrap-icons';
-import axios from 'axios';
+import { Card, Container, Row, Col } from 'react-bootstrap';
+import { Wind, Activity, Thermometer, Droplet, CloudHaze } from 'react-bootstrap-icons';
+import api from '../src/services/api'; 
+import { 
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  PieChart, Pie, Cell 
+} from 'recharts';
+import AqiGaugeChart from '../components/AqiGaugeChart';
+
+// --- (Dados de exemplo e funções auxiliares - sem alterações) ---
+const lineChartData = [
+  { time: '18:00', aqi: 35 }, { time: '19:00', aqi: 45 }, { time: '20:00', aqi: 50 },
+  { time: '21:00', aqi: 48 }, { time: '22:00', aqi: 60 }, { time: '23:00', aqi: 55 },
+];
+const processPieData = (data) => {
+    const co2Value = parseFloat(data.co2) || 0;
+    const vocsValue = parseFloat(data.vocs) || 0;
+    const noxValue = parseFloat(data.nox) || 0;
+    return [{ name: 'CO₂', value: co2Value }, { name: 'VOCs', value: vocsValue }, { name: 'NOx', value: noxValue }];
+};
+const PIE_COLORS = ['#8884d8', '#82ca9d', '#ffc658'];
 
 const Dashboard = () => {
   const [airQualityData, setAirQualityData] = useState({
-    aqi: '',
-    pm25: '',
-    pm10: '',
-    co2: '',
-    nh3: '',
-    benzeno: '',
-    alcool: '',
-    etanol: '',
-    nox: '',
-    fumaca: '',
-    humidity: '',
-    lastUpdate: ''
+    aqi: '55', co2: '450 ppm', vocs: '120 ppb', nox: '0.05 ppm', lastUpdate: ''
   });
 
+  // ... (useEffect para buscar dados - sem alterações)
   useEffect(() => {
     const fetchSensorData = async () => {
       try {
-        const response = await axios.get('/api/sensor'); // ajuste a URL conforme sua API
-        setAirQualityData({
-          ...response.data,
-          lastUpdate: new Date().toLocaleTimeString('pt-BR')
-        });
+        const response = await api.get('/sensor');
+        setAirQualityData({ ...response.data, lastUpdate: new Date().toLocaleTimeString('pt-BR') });
       } catch (error) {
-        // Trate erro de conexão ou resposta
         console.error('Erro ao buscar dados do sensor:', error);
+        setAirQualityData(prevData => ({...prevData, lastUpdate: new Date().toLocaleTimeString('pt-BR')}));
       }
     };
-
     fetchSensorData();
     const interval = setInterval(fetchSensorData, 30000);
     return () => clearInterval(interval);
   }, []);
-
-  const getAQIStatus = (aqi) => {
-    if (aqi <= 50) return { text: 'Boa', color: 'success', bg: 'success' };
-    if (aqi <= 100) return { text: 'Moderada', color: 'warning', bg: 'warning' };
-    if (aqi <= 150) return { text: 'Insalubre para grupos sensíveis', color: 'danger', bg: 'danger' };
-    return { text: 'Insalubre', color: 'dark', bg: 'dark' };
-  };
-
-  const getPM25Status = (pm25) => {
-    if (pm25 <= 12) return { color: 'success', trend: 'down' };
-    if (pm25 <= 35) return { color: 'warning', trend: 'stable' };
-    return { color: 'danger', trend: 'up' };
-  };
-
-  const aqiStatus = getAQIStatus(airQualityData.aqi);
-  const pm25Status = getPM25Status(parseFloat(airQualityData.pm25));
+  
+  const pieChartData = processPieData(airQualityData);
 
   return (
     <Container fluid className="py-4 px-3">
       <Row className="justify-content-center">
         <Col xs={12} xl={10}>
+          {/* --- Título da Página --- */}
           <div className="mb-4">
-            <h1 className="display-6 fw-bold text-primary mb-2">
-              <Wind className="me-3" size={40} />
-              Qualidade do Ar
-            </h1>
-            <p className="text-muted mb-0">
-              Monitoramento em tempo real • Última atualização: {airQualityData.lastUpdate}
-            </p>
+            <h1 className="display-6 fw-bold text-primary mb-2"><Wind className="me-3" size={40} />Qualidade do Ar</h1>
+            <p className="text-muted mb-0">Monitoramento em tempo real • Última atualização: {airQualityData.lastUpdate}</p>
           </div>
-          <Row className="g-4">
-            <Col xs={12} lg={8}>
+
+          {/* =============================================== */}
+          {/* ========= NOVA ESTRUTURA DE LAYOUT ========== */}
+          {/* =============================================== */}
+          
+          {/* --- LINHA SUPERIOR COM GRÁFICOS DE RESUMO --- */}
+          <Row className="g-4 mb-4">
+            <Col md={6}>
               <Card className="h-100 shadow-sm border-0">
-                <Card.Header className="bg-primary bg-opacity-10 border-0">
-                  <div className="d-flex align-items-center justify-content-between">
-                    <h5 className="mb-0 text-primary fw-semibold">
-                      <Activity className="me-2" />
-                      Tendência da Qualidade do Ar
-                    </h5>
-                    <Badge bg={aqiStatus.bg} className="px-3 py-2">
-                      AQI: {airQualityData.aqi} - {aqiStatus.text}
-                    </Badge>
-                  </div>
+                <Card.Header className="bg-light border-0">
+                  <h5 className="mb-0 fw-semibold text-center">Índice de Qualidade do Ar (AQI)</h5>
                 </Card.Header>
-                <Card.Body className="p-4">
-                  <div className="position-relative" style={{ height: '300px' }}>
-                    <div className="d-flex align-items-end justify-content-around h-100 border-bottom border-2">
-                      {/* Gráfico zerado */}
-                      {Array.from({ length: 12 }).map((_, index) => (
-                        <div
-                          key={index}
-                          className="bg-primary bg-opacity-75 rounded-top"
-                          style={{
-                            width: '6%',
-                            height: `0%`,
-                            minHeight: '2px',
-                            transition: 'all 0.3s ease'
-                          }}
-                          title={`Hora ${index + 1}: AQI 0`}
-                        ></div>
-                      ))}
-                    </div>
-                    <div className="d-flex justify-content-around mt-2">
-                      {['00h', '02h', '04h', '06h', '08h', '10h', '12h', '14h', '16h', '18h', '20h', '22h'].map((time, index) => (
-                        <small key={index} className="text-muted" style={{ fontSize: '0.75rem' }}>
-                          {time}
-                        </small>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="mt-4 p-3 bg-light rounded">
-                    <div className="row text-center">
-                      <div className="col-3">
-                        <div className="text-success fw-bold">0-50</div>
-                        <small className="text-muted">Boa</small>
-                      </div>
-                      <div className="col-3">
-                        <div className="text-warning fw-bold">51-100</div>
-                        <small className="text-muted">Moderada</small>
-                      </div>
-                      <div className="col-3">
-                        <div className="text-danger fw-bold">101-150</div>
-                        <small className="text-muted">Insalubre</small>
-                      </div>
-                      <div className="col-3">
-                        <div className="text-dark fw-bold">151+</div>
-                        <small className="text-muted">Perigosa</small>
-                      </div>
-                    </div>
-                  </div>
+                <Card.Body className="d-flex align-items-center justify-content-center">
+                  <AqiGaugeChart value={parseInt(airQualityData.aqi, 10)} />
                 </Card.Body>
               </Card>
             </Col>
-            <Col xs={12} lg={4}>
-              <Row className="g-4">
-                {/* Amônia (NH3) */}
-                <Col xs={12} sm={6} lg={12}>
-                  <Card className="h-100 shadow-sm border-0">
-                    <Card.Body className="p-4">
-                      <div className="d-flex align-items-center justify-content-between mb-3">
-                        <div className="d-flex align-items-center">
-                          <div className="p-2 rounded-circle bg-success bg-opacity-10 me-3">
-                            <CloudFog className="text-success" size={24} />
-                          </div>
-                          <div>
-                            <h6 className="mb-0 fw-semibold">Amônia (NH₃)</h6>
-                            <small className="text-muted">10 a 300 ppm</small>
-                          </div>
-                        </div>
-                      </div>
-                      <div>
-                        <h3 className="mb-0 fw-bold">{airQualityData.nh3}</h3>
-                        <small className="text-muted">ppm</small>
-                      </div>
-                    </Card.Body>
-                  </Card>
-                </Col>
-                {/* Benzeno (C6H6) */}
-                <Col xs={12} sm={6} lg={12}>
-                  <Card className="h-100 shadow-sm border-0">
-                    <Card.Body className="p-4">
-                      <div className="d-flex align-items-center justify-content-between mb-3">
-                        <div className="d-flex align-items-center">
-                          <div className="p-2 rounded-circle bg-warning bg-opacity-10 me-3">
-                            <CloudFog className="text-warning" size={24} />
-                          </div>
-                          <div>
-                            <h6 className="mb-0 fw-semibold">Benzeno (C₆H₆)</h6>
-                            <small className="text-muted">10 a 1000 ppm</small>
-                          </div>
-                        </div>
-                      </div>
-                      <div>
-                        <h3 className="mb-0 fw-bold">{airQualityData.benzeno}</h3>
-                        <small className="text-muted">ppm</small>
-                      </div>
-                    </Card.Body>
-                  </Card>
-                </Col>
-                {/* Álcool e Etanol */}
-                <Col xs={12} sm={6} lg={12}>
-                  <Card className="h-100 shadow-sm border-0">
-                    <Card.Body className="p-4">
-                      <div className="d-flex align-items-center justify-content-between mb-3">
-                        <div className="d-flex align-items-center">
-                          <div className="p-2 rounded-circle bg-info bg-opacity-10 me-3">
-                            <CloudFog className="text-info" size={24} />
-                          </div>
-                          <div>
-                            <h6 className="mb-0 fw-semibold">Álcool / Etanol</h6>
-                            <small className="text-muted">Detecção presente</small>
-                          </div>
-                        </div>
-                      </div>
-                      <div>
-                        <h3 className="mb-0 fw-bold">{airQualityData.alcool}</h3>
-                        <small className="text-muted">Álcool</small>
-                        <br />
-                        <h3 className="mb-0 fw-bold">{airQualityData.etanol}</h3>
-                        <small className="text-muted">Etanol</small>
-                      </div>
-                    </Card.Body>
-                  </Card>
-                </Col>
-                {/* Óxido Nítrico (NOx) */}
-                <Col xs={12} sm={6} lg={12}>
-                  <Card className="h-100 shadow-sm border-0">
-                    <Card.Body className="p-4">
-                      <div className="d-flex align-items-center justify-content-between mb-3">
-                        <div className="d-flex align-items-center">
-                          <div className="p-2 rounded-circle bg-primary bg-opacity-10 me-3">
-                            <CloudFog className="text-primary" size={24} />
-                          </div>
-                          <div>
-                            <h6 className="mb-0 fw-semibold">Óxido Nítrico (NOx)</h6>
-                            <small className="text-muted">Detecção presente</small>
-                          </div>
-                        </div>
-                      </div>
-                      <div>
-                        <h3 className="mb-0 fw-bold">{airQualityData.nox}</h3>
-                        <small className="text-muted">ppm</small>
-                      </div>
-                    </Card.Body>
-                  </Card>
-                </Col>
-                {/* Dióxido de Carbono (CO2) */}
-                <Col xs={12} sm={6} lg={12}>
-                  <Card className="h-100 shadow-sm border-0">
-                    <Card.Body className="p-4">
-                      <div className="d-flex align-items-center justify-content-between mb-3">
-                        <div className="d-flex align-items-center">
-                          <div className="p-2 rounded-circle bg-secondary bg-opacity-10 me-3">
-                            <CloudFog className="text-secondary" size={24} />
-                          </div>
-                          <div>
-                            <h6 className="mb-0 fw-semibold">Dióxido de Carbono (CO₂)</h6>
-                            <small className="text-muted">Detecção presente</small>
-                          </div>
-                        </div>
-                      </div>
-                      <div>
-                        <h3 className="mb-0 fw-bold">{airQualityData.co2}</h3>
-                        <small className="text-muted">ppm</small>
-                      </div>
-                    </Card.Body>
-                  </Card>
-                </Col>
-                {/* Fumaça */}
-                <Col xs={12} sm={6} lg={12}>
-                  <Card className="h-100 shadow-sm border-0">
-                    <Card.Body className="p-4">
-                      <div className="d-flex align-items-center justify-content-between mb-3">
-                        <div className="d-flex align-items-center">
-                          <div className="p-2 rounded-circle bg-dark bg-opacity-10 me-3">
-                            <CloudFog className="text-dark" size={24} />
-                          </div>
-                          <div>
-                            <h6 className="mb-0 fw-semibold">Fumaça</h6>
-                            <small className="text-muted">Detecção presente</small>
-                          </div>
-                        </div>
-                      </div>
-                      <div>
-                        <h3 className="mb-0 fw-bold">{airQualityData.fumaca}</h3>
-                        <small className="text-muted">ppm</small>
-                      </div>
-                    </Card.Body>
-                  </Card>
-                </Col>
-              </Row>
+
+            <Col md={6}>
+              <Card className="h-100 shadow-sm border-0">
+                <Card.Header className="bg-light border-0">
+                  <h5 className="mb-0 fw-semibold text-center">Composição de Poluentes</h5>
+                </Card.Header>
+                <Card.Body>
+                  <ResponsiveContainer width="100%" height={180}>
+                    <PieChart>
+                      <Pie data={pieChartData} cx="50%" cy="50%" innerRadius={50} outerRadius={70} fill="#8884d8" paddingAngle={5} dataKey="value" label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`}>
+                        {pieChartData.map((entry, index) => ( <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} /> ))}
+                      </Pie>
+                      <Tooltip />
+                      <Legend iconSize={10} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </Card.Body>
+              </Card>
+            </Col>
+          </Row>
+
+          {/* --- LINHA INFERIOR COM GRÁFICO DE TENDÊNCIA E CARDS DE MEDIDORES --- */}
+          <Row className="g-4">
+            <Col lg={8}>
+              <Card className="h-100 shadow-sm border-0">
+                <Card.Header className="bg-primary bg-opacity-10 border-0">
+                  <h5 className="mb-0 text-primary fw-semibold"><Activity className="me-2" />Tendência Diária do AQI</h5>
+                </Card.Header>
+                <Card.Body className="p-4">
+                  <ResponsiveContainer width="100%" height={350}>
+                    <LineChart data={lineChartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="time" />
+                      <YAxis />
+                      <Tooltip />
+                      <Line type="monotone" dataKey="aqi" name="AQI" stroke="#8884d8" activeDot={{ r: 8 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </Card.Body>
+              </Card>
+            </Col>
+
+            <Col lg={4}>
+                <div className="d-flex flex-column justify-content-between h-100">
+                    <Card className="shadow-sm border-0 flex-grow-1">
+                        <Card.Body className="d-flex flex-column justify-content-center p-4">
+                            <div><Thermometer className="text-secondary" size={24} /><h6 className="mb-0 fw-semibold d-inline-block ms-2">Dióxido de Carbono (CO₂)</h6></div>
+                            <h3 className="mb-0 fw-bold mt-3">{airQualityData.co2}</h3>
+                        </Card.Body>
+                    </Card>
+                    <div className="my-2"></div> {/* Espaçador */}
+                    <Card className="shadow-sm border-0 flex-grow-1">
+                        <Card.Body className="d-flex flex-column justify-content-center p-4">
+                            <div><Droplet className="text-warning" size={24} /><h6 className="mb-0 fw-semibold d-inline-block ms-2">Compostos Orgânicos (VOCs)</h6></div>
+                            <h3 className="mb-0 fw-bold mt-3">{airQualityData.vocs}</h3>
+                        </Card.Body>
+                    </Card>
+                     <div className="my-2"></div> {/* Espaçador */}
+                    <Card className="shadow-sm border-0 flex-grow-1">
+                         <Card.Body className="d-flex flex-column justify-content-center p-4">
+                            <div><CloudHaze className="text-danger" size={24} /><h6 className="mb-0 fw-semibold d-inline-block ms-2">NOx / Fumaça / Partículas</h6></div>
+                            <h3 className="mb-0 fw-bold mt-3">{airQualityData.nox}</h3>
+                        </Card.Body>
+                    </Card>
+                </div>
             </Col>
           </Row>
         </Col>

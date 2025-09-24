@@ -1,61 +1,105 @@
-import React from 'react';
-import 'bootstrap/dist/css/bootstrap.min.css';
-import logo from '.././src/assets/logo.png';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Card, Form, Button, Alert, Spinner, InputGroup, Row, Col } from 'react-bootstrap';
+import { Eye, EyeSlash } from 'react-bootstrap-icons';
+import 'bootstrap/dist/css/bootstrap.min.css';
+import '../src/styles/Auth.css';
+import logo from '../public/logo.png';
 
 const Cadastro = () => {
+    const [formData, setFormData] = useState({ nome: '', email: '', password: '', password_confirm: '' });
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+
+    const handleChange = (e) => {
+        const { id, value } = e.target;
+        setFormData(prevState => ({ ...prevState, [id]: value }));
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setError('');
+        setIsLoading(true);
+
+        const { nome, email, password, password_confirm } = formData;
+        if (!nome || !email || !password || !password_confirm) {
+            setError('Todos os campos são obrigatórios.');
+            setIsLoading(false);
+            return;
+        }
+        if (password !== password_confirm) {
+            setError('As senhas não coincidem.');
+            setIsLoading(false);
+            return;
+        }
+        if (password.length < 6) {
+            setError('A senha deve ter no mínimo 6 caracteres.');
+            setIsLoading(false);
+            return;
+        }
+
+        // Simulação de chamada de API
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        console.log('Dados do formulário:', formData);
+        setIsLoading(false);
+        // Lógica de sucesso (ex: redirecionar para o dashboard)
+    };
+
     return (
-        <div className="d-flex justify-content-center align-items-center bg-light" style={{ minHeight: '100vh', minWidth: '100vw' }}>
-            <div className="card p-4 shadow" style={{ maxWidth: '400px', width: '100%', transform: 'scale(0.9)', transformOrigin: 'center', paddingTop: '32px', paddingBottom: '32px' }}>
-                <div className="text-center mb-2">
-                    <img src={logo} alt="logo" className="img-fluid mb-2" style={{ width: '90px' }}/>
-                    <h2 className="fs-4 fw-bold">Seja bem-vindo!</h2>
+        <div className="auth-container">
+            <Card className="shadow auth-card">
+              <Card.Body>
+                <div className="text-center mb-4">
+                    <img src={logo} alt="logo" className="auth-logo"/>
+                    <h2 className="auth-title">Crie sua conta</h2>
                 </div>
-                <form className="row g-2">
-                    <div className="col-12">
-                        <label htmlFor="nome" className="form-label fw-bold">Nome</label>
-                        <input type="text" id="nome" className="form-control" placeholder="Digite seu nome" />
-                    </div>
-                    <div className="col-12">
-                        <label htmlFor="email" className="form-label fw-bold">E-mail</label>
-                        <input type="email" id="email" className="form-control" placeholder="Digite seu e-mail" style={{paddingLeft: '8px'}}/>
-                    </div>
-                                        <div className="col-12 col-md-6">
-                                                <label htmlFor="password" className="form-label fw-bold">Senha</label>
-                                                <input
-                                                    type="password"
-                                                    id="password"
-                                                    className="form-control"
-                                                    placeholder=""
-                                                    style={{ width: '100%' }}
-                                                    autoComplete="new-password"
-                                                />
-                                        </div>
-                                        <div className="col-12 col-md-6">
-                                                <label htmlFor="password_confirm" className="form-label fw-bold">Confirmar senha</label>
-                                                <input
-                                                    type="password"
-                                                    id="password_confirm"
-                                                    className="form-control"
-                                                    placeholder=""
-                                                    style={{ width: '100%' }}
-                                                    autoComplete="new-password"
-                                                />
-                                        </div>
-                    <div className="col-12">
-                        <button 
-                            type="submit" 
-                            className="btn btn-lg btn-primary w-100 fw-bold mt-2" 
-                            style={{ background: 'linear-gradient(90deg, #53a3c9, #28a745)', border: 'none', color: 'white', fontSize: '1rem' }}
-                        >
-                            Cadastrar
-                        </button>
-                    </div>
-                </form>
-                <p className="text-center mt-2 text-secondary">
-                    Já tem conta? <Link to="/">Entrar</Link>
+
+                {error && <Alert variant="danger">{error}</Alert>}
+
+                <Form onSubmit={handleSubmit}>
+                    <Form.Group className="mb-3" controlId="nome">
+                        <Form.Label className="auth-form-label">Nome</Form.Label>
+                        <Form.Control type="text" placeholder="Digite seu nome completo" value={formData.nome} onChange={handleChange} />
+                    </Form.Group>
+
+                    <Form.Group className="mb-3" controlId="email">
+                        <Form.Label className="auth-form-label">E-mail</Form.Label>
+                        <Form.Control type="email" placeholder="Digite seu e-mail" value={formData.email} onChange={handleChange} />
+                    </Form.Group>
+                    
+                    <Row>
+                      <Col sm={6}>
+                        <Form.Group className="mb-3" controlId="password">
+                          <Form.Label className="auth-form-label">Senha</Form.Label>
+                           <InputGroup>
+                            <Form.Control type={showPassword ? "text" : "password"} placeholder="Mín. 6 caracteres" value={formData.password} onChange={handleChange} />
+                             <InputGroup.Text onClick={() => setShowPassword(!showPassword)} style={{cursor: 'pointer'}}>{showPassword ? <EyeSlash /> : <Eye />}</InputGroup.Text>
+                          </InputGroup>
+                        </Form.Group>
+                      </Col>
+                      <Col sm={6}>
+                        <Form.Group className="mb-3" controlId="password_confirm">
+                          <Form.Label className="auth-form-label">Confirmar Senha</Form.Label>
+                           <InputGroup>
+                            <Form.Control type={showConfirmPassword ? "text" : "password"} placeholder="Repita a senha" value={formData.password_confirm} onChange={handleChange} />
+                             <InputGroup.Text onClick={() => setShowConfirmPassword(!showConfirmPassword)} style={{cursor: 'pointer'}}>{showConfirmPassword ? <EyeSlash /> : <Eye />}</InputGroup.Text>
+                          </InputGroup>
+                        </Form.Group>
+                      </Col>
+                    </Row>
+                    
+                    <Button type="submit" className="w-100 auth-submit-button" disabled={isLoading}>
+                      {isLoading ? <><Spinner as="span" animation="border" size="sm" /> Cadastrando...</> : 'Cadastrar'}
+                    </Button>
+                </Form>
+
+                <p className="text-center mt-3 text-secondary">
+                    Já tem conta? <Link to="/" className="auth-link">Entrar</Link>
                 </p>
-            </div>
+              </Card.Body>
+            </Card>
         </div>
     );
 };

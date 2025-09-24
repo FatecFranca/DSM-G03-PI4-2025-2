@@ -1,220 +1,76 @@
-import React, { useState } from 'react';
-import { Navbar, Nav, Container, Dropdown } from 'react-bootstrap';
-import { House, Grid3x3Gap, Gear, ClockHistory, PersonCircle } from 'react-bootstrap-icons';
+// aero_sence_front/components/Navbar.jsx
+import React from 'react';
+import { Navbar, Nav, Container, Dropdown, NavItem } from 'react-bootstrap';
+import { Grid3x3Gap, ClockHistory, PersonCircle, BoxArrowRight, WrenchAdjustable } from 'react-bootstrap-icons';
 import lgHorizontal from '../src/assets/lg_horizontal.png';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../src/context/AuthContext';
 
-const CustomNavbar = ({ onToggleSidebar, currentPage, setCurrentPage, userName = "Usuário" }) => {
-  const [showUserMenu, setShowUserMenu] = useState(false);
+const CustomNavbar = ({ onToggleSidebar }) => {
+  const { user, logout } = useAuth();
+  const location = useLocation();
 
-  const handleLinkClick = (linkName) => {
-    setCurrentPage(linkName);
+  const getPageName = (pathname) => {
+    switch (pathname) {
+      case '/dashboard':
+        return 'Dashboard';
+      case '/historico':
+        return 'Histórico';
+      case '/config':
+        return 'Configurações';
+      default:
+        return '';
+    }
   };
 
-  const handleLogout = () => {
-    window.location.href = '/Login';
-  };
+  const currentPage = getPageName(location.pathname);
 
   return (
-    <Navbar 
-      expand="lg" 
-      className="custom-navbar shadow-sm"
-      fixed="top"
-      style={{
-        backgroundColor: '#f8f9fa',
-        borderBottom: '1px solid #e9ecef',
-        backdropFilter: 'blur(10px)',
-        WebkitBackdropFilter: 'blur(10px)'
-      }}
-    >
+    <Navbar expand="lg" className="shadow-sm" fixed="top" bg="light" variant="light">
       <Container fluid className="px-4">
         {/* Logo */}
-        <Navbar.Brand 
-          href="#home" 
-          className="d-flex align-items-center"
-        >
-          <img 
-            src={lgHorizontal} 
-            alt="Logo da Aplicação"
-            className="navbar-logo"
-            style={{
-              height: '40px',
-              width: 'auto',
-              maxWidth: '200px',
-              objectFit: 'contain'
-            }}
-          />
+        <Navbar.Brand as={Link} to="/dashboard">
+          <img src={lgHorizontal} alt="Logo AeroSense" style={{ height: '40px' }} />
         </Navbar.Brand>
 
-        {/* Toggle button para mobile e para abrir sidebar */}
-        <Navbar.Toggle 
-          aria-controls="basic-navbar-nav"
-          onClick={onToggleSidebar}
-          style={{
-            border: 'none',
-            padding: '4px 8px'
-          }}
-        >
-          <span style={{
-            display: 'block',
-            width: '22px',
-            height: '2px',
-            backgroundColor: '#495057',
-            margin: '4px 0',
-            transition: '0.3s'
-          }}></span>
-          <span style={{
-            display: 'block',
-            width: '22px',
-            height: '2px',
-            backgroundColor: '#495057',
-            margin: '4px 0',
-            transition: '0.3s'
-          }}></span>
-          <span style={{
-            display: 'block',
-            width: '22px',
-            height: '2px',
-            backgroundColor: '#495057',
-            margin: '4px 0',
-            transition: '0.3s'
-          }}></span>
-        </Navbar.Toggle>
+        <Navbar.Toggle aria-controls="basic-navbar-nav" />
 
         {/* Links de navegação */}
         <Navbar.Collapse id="basic-navbar-nav">
-          <Nav className="ms-auto align-items-center">
-            <Nav.Link
-              as={Link}
-              to="/Dashboard"
-              className={`nav-link-custom ${currentPage === 'dashboard' ? 'active' : ''}`}
-              onClick={() => handleLinkClick('dashboard')}
-              style={{
-                color: currentPage === 'dashboard' ? '#0d6efd' : '#6c757d',
-                fontWeight: '500',
-                padding: '8px 16px',
-                margin: '0 4px',
-                borderRadius: '6px',
-                transition: 'all 0.3s ease',
-                backgroundColor: currentPage === 'dashboard' ? '#e7f3ff' : 'transparent'
-              }}
-            >
-              <Grid3x3Gap className="me-2" size={16} />
-              Dashboard
+          <Nav className="mx-auto">
+            <Nav.Link as={Link} to="/dashboard" active={currentPage === 'Dashboard'}>
+              <Grid3x3Gap className="me-2" />Dashboard
             </Nav.Link>
-
-            <Nav.Link
-              as={Link}
-              to="/Historico"
-              className={`nav-link-custom ${currentPage === 'historico' ? 'active' : ''}`}
-              onClick={() => handleLinkClick('historico')}
-              style={{
-                color: currentPage === 'historico' ? '#0d6efd' : '#6c757d',
-                fontWeight: '500',
-                padding: '8px 16px',
-                margin: '0 4px',
-                borderRadius: '6px',
-                transition: 'all 0.3s ease',
-                backgroundColor: currentPage === 'historico' ? '#e7f3ff' : 'transparent'
-              }}
-            >
-              <ClockHistory className="me-2" size={16} />
-              Histórico
+            <Nav.Link as={Link} to="/historico" active={currentPage === 'Histórico'}>
+              <ClockHistory className="me-2" />Histórico
             </Nav.Link>
-
-            <Nav.Link
-              as={Link}
-              to="/Config"
-              className={`nav-link-custom ${currentPage === 'configuracoes' ? 'active' : ''}`}
-              onClick={() => handleLinkClick('configuracoes')}
-              style={{
-                color: currentPage === 'configuracoes' ? '#0d6efd' : '#6c757d',
-                fontWeight: '500',
-                padding: '8px 16px',
-                margin: '0 4px',
-                borderRadius: '6px',
-                transition: 'all 0.3s ease',
-                backgroundColor: currentPage === 'configuracoes' ? '#e7f3ff' : 'transparent'
-              }}
-            >
-              <Gear className="me-2" size={16} />
-              Configurações
-            </Nav.Link>
-
-            {/* Usuário Dropdown */}
-            <Dropdown align="end" show={showUserMenu} onToggle={setShowUserMenu} className="ms-2">
-              <Dropdown.Toggle
-                variant="link"
-                id="dropdown-user"
-                className="d-flex align-items-center p-0 border-0 bg-transparent shadow-none"
-                style={{ textDecoration: 'none', color: '#495057', fontWeight: 500 }}
-              >
+            {/* O link de Configurações foi removido daqui */}
+          </Nav>
+          
+          {/* Menu Dropdown do Usuário */}
+          <Nav>
+            <Dropdown as={NavItem}>
+              <Dropdown.Toggle as={Nav.Link} className="d-flex align-items-center">
                 <PersonCircle size={22} className="me-2" />
-                <span className="d-none d-md-inline">Olá, {userName}</span>
+                <span>Olá, {user ? user.name : 'Usuário'}</span>
               </Dropdown.Toggle>
-              <Dropdown.Menu>
-                <Dropdown.Item onClick={handleLogout}>Sair</Dropdown.Item>
+              <Dropdown.Menu align="end">
+                <Dropdown.Item as={Link} to="/config">
+                    <WrenchAdjustable className="me-2" />
+                    Minha Conta
+                </Dropdown.Item>
+                <Dropdown.Divider />
+                <Dropdown.Item onClick={logout} className="text-danger">
+                  <BoxArrowRight className="me-2" />
+                  Sair
+                </Dropdown.Item>
               </Dropdown.Menu>
             </Dropdown>
           </Nav>
         </Navbar.Collapse>
       </Container>
-
-      {/* CSS customizado inline para efeitos hover */}
-      <style jsx>{`
-        .nav-link-custom:hover {
-          color: #0d6efd !important;
-          background-color: #f0f8ff !important;
-          transform: translateY(-1px);
-        }
-        
-        .custom-navbar {
-          min-height: 70px;
-        }
-        
-        .navbar-logo {
-          transition: all 0.3s ease;
-          filter: brightness(1);
-        }
-        
-        .navbar-brand:hover .navbar-logo {
-          transform: scale(1.05);
-          filter: brightness(1.1);
-        }
-        
-        @media (max-width: 991.98px) {
-          .navbar-collapse {
-            background-color: #ffffff;
-            border-radius: 8px;
-            margin-top: 10px;
-            padding: 15px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-          }
-          
-          .navbar-logo {
-            height: 35px !important;
-            max-width: 180px !important;
-          }
-        }
-        
-        @media (max-width: 575.98px) {
-          .navbar-logo {
-            height: 30px !important;
-            max-width: 150px !important;
-          }
-        }
-        
-        .navbar-toggler:focus {
-          box-shadow: none;
-        }
-        
-        .navbar-brand:hover {
-          transform: none;
-        }
-      `}</style>
     </Navbar>
   );
 };
 
 export default CustomNavbar;
-

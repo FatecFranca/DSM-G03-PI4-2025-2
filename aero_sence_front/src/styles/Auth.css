@@ -1,0 +1,65 @@
+/* aero_sence_front/styles/Auth.css */
+
+.auth-container {
+  min-height: 100vh;
+  min-width: 100vw;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #f0f2f5;
+  padding: 1rem;
+}
+
+.auth-card {
+  max-width: 420px;
+  width: 100%;
+  padding: 2rem;
+  border: none;
+  border-radius: 12px;
+}
+
+.auth-logo {
+  width: 90px;
+  margin-bottom: 0.5rem;
+}
+
+.auth-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.auth-form-label {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.auth-submit-button {
+  background: linear-gradient(90deg, #53a3c9, #28a745);
+  border: none;
+  color: white;
+  font-size: 1rem;
+  font-weight: 700;
+  padding: 0.75rem;
+  margin-top: 1rem;
+}
+
+.auth-submit-button:hover {
+  opacity: 0.9;
+}
+
+.auth-link {
+  font-weight: 600;
+}
+
+.password-input-group {
+  position: relative;
+}
+
+.password-toggle-icon {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: #6c757d;
+}
