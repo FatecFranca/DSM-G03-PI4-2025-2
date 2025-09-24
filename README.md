@@ -9,8 +9,6 @@ O projeto é organizado com duas pastas principais:
 
 ### Front-end (`aero_sence_front`)
 
-A interface do utilizador foi construída com tecnologias modernas para garantir uma experiência reativa e intuitiva.
-
 -   **Tecnologias Principais:**
     -   **React:** Biblioteca principal para a construção da interface.
     -   **Vite:** Ferramenta de build e servidor de desenvolvimento de alta performance.
@@ -28,8 +26,6 @@ A interface do utilizador foi construída com tecnologias modernas para garantir
 
 ### Back-end (`aero_sence_back`)
 
-A API foi desenhada para ser segura, escalável e eficiente, seguindo as melhores práticas de desenvolvimento.
-
 -   **Tecnologias Principais:**
     -   **Node.js & Express:** Ambiente de execução e framework para a construção da API.
     -   **TypeScript:** Para adicionar tipagem estática e robustez ao código.
@@ -39,7 +35,7 @@ A API foi desenhada para ser segura, escalável e eficiente, seguindo as melhore
     -   **Bcrypt.js:** Para a encriptação segura das palavras-passe dos utilizadores.
 
 -   **Estrutura de Pastas:**
-    -   `src/controllers/`: Contém a lógica de negócio da aplicação (ex: o que fazer quando um utilizador se regista).
+    -   `src/controllers/`: Contém a lógica de negócio da aplicação.
     -   `src/routes/`: Define os endpoints da API (ex: `POST /api/auth/register`).
     -   `src/middleware/`: Armazena funções que interceptam os pedidos, como o `authMiddleware` para proteger rotas.
     -   `src/services/`: Centraliza a inicialização de serviços, como o cliente Prisma.
