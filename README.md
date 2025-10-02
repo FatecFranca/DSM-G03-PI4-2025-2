@@ -41,7 +41,7 @@ O projeto é organizado com duas pastas principais:
     -   `src/services/`: Centraliza a inicialização de serviços, como o cliente Prisma.
     -   `prisma/`: Contém o ficheiro `schema.prisma`, que define a estrutura do banco de dados.
 
-## Rodando front e back localmente
+## Rodando front, back e mobile localmente
 
 ### Back-end
 Para rodar o projeto em modo de desenvolvimento (com reinicialização automática):
@@ -73,5 +73,42 @@ npm install
 # Inicie o servidor de desenvolvimento
 npm run dev
 ```
+
+### Mobile 
+Para rodar a aplicação no Expo GO:
+
+```bash
+# Navegue até a pasta do mobile
+cd aero_sence_mobile
+
+# Instale as dependências (apenas na primeira vez)
+npm install
+
+# Inicie o servidor de desenvolvimento
+npx expo start
+```
+## Baixe o Expo Go na loja de aplicativos gratuitamente: 
+- **Android:** Baixe na [**Google Play Store**](https://play.google.com/store/apps/details?id=host.exp.exponent)
+- **iOS:** Baixe na [**Apple App Store**](https://apps.apple.com/us/app/expo-go/id982107779)
+
+# Escaneie o QR Code exibido no terminal:
+- **iOS:** Aponte a câmera do seu iPhone para o QR Code.
+- **Android:** Abra o app Expo Go e use a opção "Scan QR Code".
+
+## 📜 Scripts Adicionais
+
+Além do script principal, você pode usar os seguintes comandos no terminal:
+
+* **Rodar em um emulador Android:**
+    ```bash
+    npx expo run:android
+    ```
+
+* **Rodar em um simulador iOS (apenas macOS):**
+    ```bash
+    npx expo run:ios
+    ```
+
+
 
 A aplicação estará acessível em: http://localhost:5173.
