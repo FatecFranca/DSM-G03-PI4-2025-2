@@ -42,6 +42,22 @@ O projeto é organizado com três pastas principais:
     -   `src/middleware/`: Armazena funções que interceptam os pedidos, como o `authMiddleware` para proteger rotas.
     -   `src/services/`: Centraliza a inicialização de serviços, como o cliente Prisma.
     -   `prisma/`: Contém o ficheiro `schema.prisma`, que define a estrutura do banco de dados.
+ 
+    ### Mobile (`aero_sense_mobile`)
+    
+- **Tecnologias Principais:**
+    - **React Native:** Framework para a construção de aplicações nativas para iOS e Android utilizando JavaScript e React.
+    - **Expo:** Plataforma e conjunto de ferramentas que simplificam o desenvolvimento, o build e a publicação de apps React Native.
+    - **React Navigation:** Biblioteca para a gestão de rotas e navegação entre as diferentes telas do aplicativo.
+    - **Axios:** Para a comunicação com a API do back-end, buscando e enviando dados dos sensores e do usuário.
+
+- **Estrutura de Pastas:**
+
+    - `screens/`: Contém os componentes de tela principais (Login, Dashboard, Histórico, Configurações, etc.).
+    - `components/`: Armazena componentes reutilizáveis que são usados em várias telas (botões, cards, etc.).
+    - `navigation/`: Define os navegadores (Stack, Tab) e a estrutura de navegação do app.
+    - `assets/`: Para armazenar recursos estáticos como imagens, ícones e fontes.
+    - `services/`: Centraliza a configuração de serviços, como as chamadas de API com Axios.
 
 ## Rodando front, back e mobile localmente
 
