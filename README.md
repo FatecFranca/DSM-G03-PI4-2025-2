@@ -2,10 +2,11 @@
 
 ## Estrutura do Projeto
 
-O projeto é organizado com duas pastas principais:
+O projeto é organizado com três pastas principais:
 
 -   `aero_sence_front/`: Contém a aplicação front-end desenvolvida com React.
 -   `aero_sence_back/`: Contém a API back-end desenvolvida com Node.js e Express.
+-   `aero_sense_mobile/`: Contém a aplicação mobile desenvolvida com Expo GO.
 
 ### Front-end (`aero_sence_front`)
 
@@ -16,6 +17,7 @@ O projeto é organizado com duas pastas principais:
     -   **React Bootstrap:** Biblioteca de componentes de UI para um design consistente e responsivo.
     -   **Recharts:** Para a criação dos gráficos dinâmicos no dashboard.
     -   **Axios:** Para a comunicação com a API do back-end.
+    
 
 -   **Estrutura de Pastas:**
     -   `src/pages/`: Contém os componentes de página principais (Login, Dashboard, Histórico, etc.).
