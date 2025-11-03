@@ -23,7 +23,7 @@ const PIE_COLORS = ['#8884d8', '#82ca9d', '#ffc658'];
 
 const Dashboard = () => {
   const [airQualityData, setAirQualityData] = useState({
-    aqi: '55', co2: '450 ppm', vocs: '120 ppb', nox: '0.05 ppm', lastUpdate: ''
+    aqi: '55', co2: '450 ppm', vocs: '120 ppb', nox: '0.05 ppm', temperature: '-- °C', humidity: '-- %', lastUpdate: ''
   });
 
   // ... (useEffect para buscar dados - sem alterações)
@@ -34,6 +34,8 @@ const Dashboard = () => {
     setAirQualityData({
       aqi: response.data.aqi.toString(),
       co2: `${response.data.co2} ppm`,
+      temperature: response.data.temperature !== undefined ? `${response.data.temperature} °C` : '-- °C',
+      humidity: response.data.humidity !== undefined ? `${response.data.humidity} %` : '-- %',
       vocs: `${response.data.vocs} ppb`,
       nox: `${response.data.nox} ppm`,
       lastUpdate: new Date(response.data.createdAt).toLocaleTimeString('pt-BR')
@@ -118,30 +120,47 @@ const Dashboard = () => {
               </Card>
             </Col>
 
-            <Col lg={4}>
-                <div className="d-flex flex-column justify-content-between h-100">
-                    <Card className="shadow-sm border-0 flex-grow-1">
-                        <Card.Body className="d-flex flex-column justify-content-center p-4">
-                            <div><Thermometer className="text-secondary" size={24} /><h6 className="mb-0 fw-semibold d-inline-block ms-2">Dióxido de Carbono (CO₂)</h6></div>
-                            <h3 className="mb-0 fw-bold mt-3">{airQualityData.co2}</h3>
-                        </Card.Body>
-                    </Card>
-                    <div className="my-2"></div> {/* Espaçador */}
-                    <Card className="shadow-sm border-0 flex-grow-1">
-                        <Card.Body className="d-flex flex-column justify-content-center p-4">
-                            <div><Droplet className="text-warning" size={24} /><h6 className="mb-0 fw-semibold d-inline-block ms-2">Compostos Orgânicos (VOCs)</h6></div>
-                            <h3 className="mb-0 fw-bold mt-3">{airQualityData.vocs}</h3>
-                        </Card.Body>
-                    </Card>
-                     <div className="my-2"></div> {/* Espaçador */}
-                    <Card className="shadow-sm border-0 flex-grow-1">
-                         <Card.Body className="d-flex flex-column justify-content-center p-4">
-                            <div><CloudHaze className="text-danger" size={24} /><h6 className="mb-0 fw-semibold d-inline-block ms-2">NOx / Fumaça / Partículas</h6></div>
-                            <h3 className="mb-0 fw-bold mt-3">{airQualityData.nox}</h3>
-                        </Card.Body>
-                    </Card>
-                </div>
-            </Col>
+      <Col lg={4}>
+        <div className="d-flex flex-column justify-content-between h-100">
+          {/* Temperatura e Umidade - colocadas acima dos outros valores */}
+          <div className="d-flex gap-3 mb-3">
+            <Card className="flex-fill shadow-sm border-0">
+              <Card.Body className="d-flex flex-column justify-content-center p-3 text-center">
+                <div><Thermometer className="text-danger" size={20} /><h6 className="mb-0 fw-semibold d-inline-block ms-2">Temperatura</h6></div>
+                <h4 className="mb-0 fw-bold mt-2">{airQualityData.temperature}</h4>
+              </Card.Body>
+            </Card>
+
+            <Card className="flex-fill shadow-sm border-0">
+              <Card.Body className="d-flex flex-column justify-content-center p-3 text-center">
+                <div><Droplet className="text-primary" size={20} /><h6 className="mb-0 fw-semibold d-inline-block ms-2">Umidade</h6></div>
+                <h4 className="mb-0 fw-bold mt-2">{airQualityData.humidity}</h4>
+              </Card.Body>
+            </Card>
+          </div>
+
+          <Card className="shadow-sm border-0 flex-grow-1">
+            <Card.Body className="d-flex flex-column justify-content-center p-4">
+              <div><CloudHaze className="text-secondary" size={24} /><h6 className="mb-0 fw-semibold d-inline-block ms-2">Dióxido de Carbono (CO₂)</h6></div>
+              <h3 className="mb-0 fw-bold mt-3">{airQualityData.co2}</h3>
+            </Card.Body>
+          </Card>
+          <div className="my-2"></div> {/* Espaçador */}
+          <Card className="shadow-sm border-0 flex-grow-1">
+            <Card.Body className="d-flex flex-column justify-content-center p-4">
+              <div><Droplet className="text-warning" size={24} /><h6 className="mb-0 fw-semibold d-inline-block ms-2">Compostos Orgânicos (VOCs)</h6></div>
+              <h3 className="mb-0 fw-bold mt-3">{airQualityData.vocs}</h3>
+            </Card.Body>
+          </Card>
+           <div className="my-2"></div> {/* Espaçador */}
+          <Card className="shadow-sm border-0 flex-grow-1">
+             <Card.Body className="d-flex flex-column justify-content-center p-4">
+              <div><CloudHaze className="text-danger" size={24} /><h6 className="mb-0 fw-semibold d-inline-block ms-2">NOx / Fumaça / Partículas</h6></div>
+              <h3 className="mb-0 fw-bold mt-3">{airQualityData.nox}</h3>
+            </Card.Body>
+          </Card>
+        </div>
+      </Col>
           </Row>
         </Col>
       </Row>

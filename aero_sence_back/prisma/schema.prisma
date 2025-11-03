@@ -20,12 +20,13 @@ model User {
   resetPasswordTokenExpiry DateTime?
 }
 
-// Modelo para os dados dos sensores
 model SensorData {
-  id        Int      @id @default(autoincrement())
-  aqi       Int
-  co2       Float
-  vocs      Float
-  nox       Float
-  createdAt DateTime @default(now())
+  id            Int       @id @default(autoincrement())
+  aqi           Int      
+  co2           Float 
+  vocs          Float     
+  nox           Float     
+  temperature   Float     
+  humidity      Float     
+  createdAt     DateTime  @default(now())
 }

@@ -1,3 +1,5 @@
+// routes/index.js (FINAL)
+
 // 1. Organize todas as importações no topo
 import { Router } from 'express';
 import { protect } from '../middleware/authMiddleware.js';
@@ -22,10 +24,15 @@ router.post('/auth/login', login);
 router.post('/auth/forgot-password', forgotPassword);
 router.post('/auth/reset-password', resetPassword);
 
-// Rotas do Sensor (Protegidas)
-router.post('/sensor', protect, createSensorData);
-router.get('/sensor/latest', protect, getLatestSensorData);
-router.get('/sensor/history', protect, getSensorHistory);
+// Rotas do Sensor (CORRIGIDAS)
+// A rota POST /sensor deve ser pública para que o hardware (ESP32) possa enviar dados.
+router.post('/sensor', createSensorData); 
+
+// 2. Rota de Leitura Mais Recente (Dashboard) - Sem 'protect'
+router.get('/sensor/latest', getLatestSensorData); // <-- REMOVER 'protect'
+
+// 3. Rota de Leitura do Histórico (Dashboard) - Sem 'protect'
+router.get('/sensor/history', getSensorHistory); // <-- REMOVER 'protect'
 
 // Rotas do Usuário (Protegidas)
 router.get('/user/profile', protect, getUserProfile);
