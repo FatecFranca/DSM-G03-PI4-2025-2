@@ -1,12 +1,89 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Alert, Modal, Platform } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
+import { MaterialIcons } from '@expo/vector-icons';
 import api from '../src/services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-export default function DashboardScreen({ onHistorico, onConfiguracoes }) {
+export default function DashboardScreen({ onHistorico, onConfiguracoes, onSair }) {
+  const [perfilVisible, setPerfilVisible] = useState(false);
+  const [sensorData, setSensorData] = useState(null);
+
+  // Busca os dados mais recentes do sensor
+  const fetchLatest = async () => {
+    try {
+      const res = await api.get('/sensor/latest');
+      if (res && res.data) setSensorData(res.data);
+    } catch (e) {
+      // silencioso — pode logar se quiser
+      // console.warn('Falha ao buscar dados do sensor', e);
+    }
+  };
+
+  useEffect(() => {
+    fetchLatest();
+    const id = setInterval(fetchLatest, 10000); // atualiza a cada 10s
+    return () => clearInterval(id);
+  }, []);
+
+  const handleSair = async () => {
+    try {
+      await AsyncStorage.removeItem('token');
+      if (onSair) {
+        onSair();
+      }
+    } catch (error) {
+      Alert.alert('Erro', 'Não foi possível sair. Tente novamente.');
+    }
+  };
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.header}>Dashboard</Text>
+      <View style={styles.headerContainer}>
+        <Text style={styles.header}>Dashboard</Text>
+        <TouchableOpacity 
+          style={styles.perfilButton} 
+          onPress={() => setPerfilVisible(true)}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+            <View>
+              <MaterialIcons name="account-circle" size={32} color="#53b7c8" />
+            </View>
+        </TouchableOpacity>
+      </View>
+
+      <Modal
+        visible={perfilVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPerfilVisible(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setPerfilVisible(false)}
+        >
+          <View style={styles.perfilMenu}>
+            <TouchableOpacity 
+              style={styles.perfilMenuItem}
+              onPress={onConfiguracoes}
+            >
+              <View style={styles.menuItemContent}>
+                <MaterialIcons name="settings" size={24} color="#333" />
+                <Text style={styles.perfilMenuText}>Configurações</Text>
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.perfilMenuItem}
+              onPress={handleSair}
+            >
+              <View style={styles.menuItemContent}>
+                <MaterialIcons name="logout" size={24} color="#ff4444" />
+                <Text style={[styles.perfilMenuText, { color: '#ff4444' }]}>Sair</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Índice de Qualidade do Ar - últimas 24 horas</Text>
@@ -26,14 +103,27 @@ export default function DashboardScreen({ onHistorico, onConfiguracoes }) {
 
       <View style={styles.row}>
         <View style={styles.infoBox}>
-          <Text style={styles.infoValue}>1200</Text>
+          <Text style={styles.infoValue}>{sensorData ? String(sensorData.co2) : '--'}</Text>
           <Text style={styles.infoUnit}>ppm</Text>
           <Text style={styles.infoLabel}>Nível de CO²</Text>
         </View>
         <View style={styles.infoBox}>
-          <Text style={styles.infoValue}>500</Text>
+          <Text style={styles.infoValue}>{sensorData ? String(sensorData.vocs) : '--'}</Text>
           <Text style={styles.infoUnit}>ppb</Text>
           <Text style={styles.infoLabel}>TVOC</Text>
+        </View>
+      </View>
+
+      <View style={styles.row}>
+        <View style={styles.infoBox}>
+          <Text style={styles.infoValue}>{sensorData ? String(sensorData.temperature) : '--'}</Text>
+          <Text style={styles.infoUnit}>°C</Text>
+          <Text style={styles.infoLabel}>Temperatura</Text>
+        </View>
+        <View style={styles.infoBox}>
+          <Text style={styles.infoValue}>{sensorData ? String(sensorData.humidity) : '--'}</Text>
+          <Text style={styles.infoUnit}>%</Text>
+          <Text style={styles.infoLabel}>Umidade</Text>
         </View>
       </View>
 
@@ -51,31 +141,78 @@ export default function DashboardScreen({ onHistorico, onConfiguracoes }) {
           <Text style={styles.navIcon}>📊</Text>
           <Text style={styles.navLabel}>Dashboard</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={onConfiguracoes}>
-          <Text style={styles.navIcon}>⚙️</Text>
-          <Text style={styles.navLabel}>Configurações</Text>
-        </TouchableOpacity>
       </View>
     </ScrollView>
   );
 }
 
+const bottomInset = Platform.OS === 'android' ? 14 : 0;
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f7fa',
+    backgroundColor: '#f5f5f5',
+  },
+  headerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 50,
+    paddingBottom: 12,
+    backgroundColor: 'transparent', // deixar transparente para não criar um retângulo branco
+    borderBottomWidth: 0,
+    borderBottomColor: 'transparent',
+  },
+  /* header (duplicate removed) */
+  perfilButton: {
+    padding: 8,
+    marginRight: 0,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  perfilMenu: {
+    position: 'absolute',
+    top: 60,
+    right: 20,
+    backgroundColor: 'white',
+    borderRadius: 8,
+    padding: 8,
+    minWidth: 200,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  perfilMenuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 4,
+  },
+  perfilMenuText: {
+    marginLeft: 12,
+    fontSize: 16,
+    color: '#333',
   },
   content: {
     alignItems: 'center',
-    paddingBottom: 80,
+    paddingBottom: 110 + bottomInset, // espaço extra para o footer não cobrir o conteúdo
   },
   header: {
+    flex: 1,
     fontSize: 22,
     fontWeight: 'bold',
-    marginTop: 50,
     marginBottom: 5,
-    alignSelf: 'flex-start',
-    marginLeft: 16,
+    color: '#333',
+    textAlign: 'left',
+    marginLeft: 0,
   },
   card: {
     backgroundColor: '#fff',
@@ -188,12 +325,13 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderColor: '#e0e0e0',
     position: 'absolute',
-    bottom: 0,
-    top: 780,
+    bottom: bottomInset,
     left: 0,
     right: 0,
-    height: 64,
+    height: 64 + bottomInset,
     paddingBottom: 8,
+    zIndex: 20,
+    elevation: 10,
   },
   navItem: {
     alignItems: 'center',

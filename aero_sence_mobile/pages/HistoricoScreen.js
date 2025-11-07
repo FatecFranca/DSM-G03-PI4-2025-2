@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, Platform } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 import api from '../src/services/api';
 
@@ -7,6 +7,8 @@ export default function HistoricoScreen({ onDashboard, onConfiguracoes }) {
   const [periodo, setPeriodo] = useState('dia');
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const bottomInset = Platform.OS === 'android' ? 14 : 0;
 
   useEffect(() => {
     (async () => {
@@ -34,7 +36,8 @@ export default function HistoricoScreen({ onDashboard, onConfiguracoes }) {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <View style={styles.container}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
       <Text style={styles.header}>Histórico</Text>
       <Text style={styles.subtitle}>MONITORAMENTO DE QUALIDADE DO AR</Text>
       <View style={styles.card}>
@@ -84,8 +87,9 @@ export default function HistoricoScreen({ onDashboard, onConfiguracoes }) {
           </TouchableOpacity>
         </View>
       </View>
-      <View style={styles.bottomNav}>
-        <TouchableOpacity style={styles.navItem} onPress={onDashboard}>
+      </ScrollView>
+      <View style={[styles.bottomNav, { height: 64 + bottomInset, paddingBottom: bottomInset }]}>
+        <TouchableOpacity style={styles.navItem}>
           <Text style={styles.navIcon}>🏠</Text>
           <Text style={styles.navLabel}>Histórico</Text>
         </TouchableOpacity>
@@ -93,12 +97,8 @@ export default function HistoricoScreen({ onDashboard, onConfiguracoes }) {
           <Text style={styles.navIcon}>📊</Text>
           <Text style={styles.navLabel}>Dashboard</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={onConfiguracoes}>
-          <Text style={styles.navIcon}>⚙️</Text>
-          <Text style={styles.navLabel}>Configurações</Text>
-        </TouchableOpacity>
       </View>
-    </ScrollView>
+    </View>
   );
 }
 
@@ -107,9 +107,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f7fa',
   },
+  scrollView: {
+    flex: 1,
+  },
   content: {
     alignItems: 'center',
-    paddingBottom: 80,
+    paddingBottom: 110,
   },
   header: {
     fontSize: 22,
@@ -187,12 +190,9 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderColor: '#e0e0e0',
     position: 'absolute',
-    top: 780,
     bottom: 0,
     left: 0,
     right: 0,
-    height: 64,
-    paddingBottom: 8,
   },
   navItem: {
     alignItems: 'center',

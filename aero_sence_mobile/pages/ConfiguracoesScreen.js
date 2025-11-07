@@ -1,11 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, BackHandler, Alert, Image } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { MaterialIcons } from '@expo/vector-icons';
 
 export default function ConfiguracoesScreen({ onDashboard, onHistorico }) {
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [senhaAtual, setSenhaAtual] = useState('');
   const [novaSenha, setNovaSenha] = useState('');
+
+  // Carrega nome e email do armazenamento local quando a tela monta
+  useEffect(() => {
+    (async () => {
+      try {
+        const userJson = await AsyncStorage.getItem('user');
+        if (userJson) {
+          const user = JSON.parse(userJson);
+          setNome(user.name || user.nome || '');
+          setEmail(user.email || '');
+        }
+      } catch (e) {
+        // não crítico — manter campos vazios se falhar
+      }
+    })();
+  }, []);
 
   const handleSair = () => {
     Alert.alert(
@@ -27,7 +45,17 @@ export default function ConfiguracoesScreen({ onDashboard, onHistorico }) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.header}>Gerenciar Perfil</Text>
+      <View style={styles.headerContainer}>
+        <TouchableOpacity 
+          onPress={onDashboard}
+          style={styles.backButton}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <MaterialIcons name="arrow-back" size={28} color="#53b7c8" />
+        </TouchableOpacity>
+        <Text style={styles.header}>Gerenciar Perfil</Text>
+        <View style={styles.headerSpacer} />
+      </View>
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Dados Pessoais</Text>
         <View style={styles.row}>
@@ -36,10 +64,9 @@ export default function ConfiguracoesScreen({ onDashboard, onHistorico }) {
             placeholder="Nome"
             value={nome}
             onChangeText={setNome}
+            editable={false}
+            selectTextOnFocus={false}
           />
-          <TouchableOpacity style={styles.editBtn}>
-            <Text style={styles.editBtnText}>Editar</Text>
-          </TouchableOpacity>
         </View>
         <View style={styles.row}>
           <TextInput
@@ -47,10 +74,9 @@ export default function ConfiguracoesScreen({ onDashboard, onHistorico }) {
             placeholder="E-mail"
             value={email}
             onChangeText={setEmail}
+            editable={false}
+            selectTextOnFocus={false}
           />
-          <TouchableOpacity style={styles.editBtn}>
-            <Text style={styles.editBtnText}>Editar</Text>
-          </TouchableOpacity>
         </View>
       </View>
       <View style={styles.section}>
@@ -85,7 +111,7 @@ export default function ConfiguracoesScreen({ onDashboard, onHistorico }) {
         <Text style={styles.deleteBtnText}>Excluir conta</Text>
       </TouchableOpacity>
       
-      <Image source={require('./assets/logo.png')} style={styles.logo} />
+      <Image source={require('../assets/logo.png')} style={styles.logo} />
 
       <TouchableOpacity style={styles.sairBtn} onPress={handleSair}>
         <Text style={styles.sairBtnText}>Sair</Text>
@@ -98,11 +124,7 @@ export default function ConfiguracoesScreen({ onDashboard, onHistorico }) {
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={onDashboard}>
           <Text style={styles.navIcon}>📊</Text>
-          <Text style={styles.navLabel}>Home</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
-          <Text style={styles.navIcon}>⚙️</Text>
-          <Text style={styles.navLabel}>Configurações</Text>
+          <Text style={styles.navLabel}>Dashboard</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -114,17 +136,33 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
+  headerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  backButton: {
+    padding: 8,
+    marginLeft: -8,
+  },
+  headerSpacer: {
+    width: 44, // Mesmo tamanho do botão de voltar para manter o título centralizado
+  },
   content: {
     alignItems: 'center',
-    paddingBottom: 80,
+    paddingBottom: 110, // evitar que o footer cubra conteúdo
   },
   header: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: 'bold',
-    marginTop: 50,
-    marginBottom: 10,
-    alignSelf: 'flex-start',
-    marginLeft: 16,
+    flex: 1,
+    textAlign: 'center',
+    color: '#333',
   },
   logo: {
     width: 150,
@@ -214,7 +252,6 @@ const styles = StyleSheet.create({
     borderColor: '#e0e0e0',
     position: 'absolute',
     bottom: 0,
-    top: 780,
     left: 0,
     right: 0,
     height: 64,

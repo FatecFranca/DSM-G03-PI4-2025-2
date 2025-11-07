@@ -3,50 +3,33 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert, Keyb
 import { LinearGradient } from 'expo-linear-gradient';
 import api from '../src/services/api';
 
-export default function CadastroScreen({ onLogin }) {
-  const [nome, setNome] = useState('');
+export default function LoginScreen({ onCadastro, onEntrar, onEsqueciSenha }) {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
-  const [confirmarSenha, setConfirmarSenha] = useState('');
   const [loading, setLoading] = useState(false);
 
-  function isEmailValido(email) {
-    // Simples validação de e-mail
-    return email.includes('@') && (email.endsWith('.com') || email.endsWith('.com.br'));
-  }
-
-  async function handleCadastro() {
-    if (!nome || !email || !senha || !confirmarSenha) {
+  async function handleLogin() {
+    if (!email || !senha) {
       Alert.alert('Erro', 'Preencha todos os campos.');
       return;
     }
-    if (senha.length < 6) {
-      Alert.alert('Erro', 'A senha deve ter pelo menos 6 caracteres.');
-      return;
-    }
-    if (!isEmailValido(email)) {
-      Alert.alert('Erro', 'Digite um e-mail válido.');
-      return;
-    }
-    if (senha !== confirmarSenha) {
-      Alert.alert('Erro', 'As senhas não coincidem.');
-      return;
-    }
+
     setLoading(true);
     try {
-      await api.post('/auth/register', { name: nome, email, password: senha });
-      setLoading(false);
-      Alert.alert('Sucesso', 'Cadastro realizado com sucesso!', [
-        { text: 'OK', onPress: onLogin }
-      ]);
+      const response = await api.post('/auth/login', {
+        email,
+        password: senha,
+      });
+
+      if (response.data.token) {
+        onEntrar();
+      }
     } catch (err) {
       setLoading(false);
       if (err.response && err.response.data && err.response.data.message) {
         Alert.alert('Erro', err.response.data.message);
-      } else if (err.response && err.response.data && typeof err.response.data === 'string') {
-        Alert.alert('Erro', err.response.data);
       } else {
-        Alert.alert('Erro', 'Não foi possível cadastrar. Verifique sua conexão e tente novamente.');
+        Alert.alert('Erro', 'Não foi possível fazer login. Verifique suas credenciais e tente novamente.');
       }
     }
   }
@@ -67,17 +50,7 @@ export default function CadastroScreen({ onLogin }) {
             style={styles.logo}
           />
           
-          <Text style={styles.welcome}>Criar Conta</Text>
-
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Nome</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Digite seu nome"
-              value={nome}
-              onChangeText={setNome}
-            />
-          </View>
+          <Text style={styles.welcome}>Seja bem-vindo!</Text>
 
           <View style={styles.inputContainer}>
             <Text style={styles.label}>E-mail</Text>
@@ -102,32 +75,30 @@ export default function CadastroScreen({ onLogin }) {
             />
           </View>
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Confirmar Senha</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Confirme sua senha"
-              value={confirmarSenha}
-              onChangeText={setConfirmarSenha}
-              secureTextEntry
-            />
-          </View>
+          <TouchableOpacity 
+            onPress={onEsqueciSenha} 
+            style={styles.forgotPassword}
+          >
+            <Text style={styles.forgotPasswordText}>
+              Esqueceu sua senha?
+            </Text>
+          </TouchableOpacity>
 
-          <TouchableOpacity onPress={handleCadastro} disabled={loading}>
+          <TouchableOpacity onPress={handleLogin} disabled={loading}>
             <LinearGradient
               colors={['#53b7c8', '#a0d48a']}
-              style={styles.cadastroButton}
+              style={styles.loginButton}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
             >
-              <Text style={styles.cadastroButtonText}>{loading ? 'Cadastrando...' : 'Cadastrar'}</Text>
+              <Text style={styles.loginButtonText}>{loading ? 'Entrando...' : 'Entrar'}</Text>
             </LinearGradient>
           </TouchableOpacity>
 
-          <View style={styles.backContainer}>
-            <Text style={styles.backPrefix}>Já tem uma conta? </Text>
-            <TouchableOpacity onPress={onLogin}>
-              <Text style={styles.backLink}>Voltar para login</Text>
+          <View style={styles.registerContainer}>
+            <Text style={styles.registerPrefix}>Não tem uma conta? </Text>
+            <TouchableOpacity onPress={onCadastro}>
+              <Text style={styles.registerLink}>Cadastre-se</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -190,30 +161,37 @@ const styles = StyleSheet.create({
     fontSize: 16,
     backgroundColor: '#fff',
   },
-  cadastroButton: {
+  forgotPassword: {
+    alignSelf: 'flex-end',
+    marginBottom: 20,
+  },
+  forgotPasswordText: {
+    color: '#53b7c8',
+    fontSize: 14,
+  },
+  loginButton: {
     width: '100%',
     height: 50,
     borderRadius: 25,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
-    marginTop: 10,
   },
-  cadastroButtonText: {
+  loginButtonText: {
     color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
   },
-  backContainer: {
+  registerContainer: {
     flexDirection: 'row',
     marginTop: 10,
     alignItems: 'center',
   },
-  backPrefix: {
+  registerPrefix: {
     color: '#666',
     fontSize: 14,
   },
-  backLink: {
+  registerLink: {
     color: '#53b7c8',
     fontSize: 14,
     fontWeight: '600',
