@@ -270,44 +270,38 @@ const Dashboard = () => {
           {/* --- GRÁFICOS ESTATÍSTICOS AVANÇADOS --- */}
           <Row className="g-4 mt-4">
             <Col xs={12}>
-              <h4 className="fw-bold text-primary mb-3">Análise Estatística Detalhada</h4>
+              <h4 className="fw-bold text-primary mb-3">Análise das Principais Métricas</h4>
             </Col>
             
-            {/* Histograma de CO₂ */}
+            {/* Tendência Temporal de CO₂ nas últimas 24h */}
             <Col lg={6}>
               <Card className="shadow-sm border-0 h-100">
                 <Card.Header className="bg-success bg-opacity-10 border-0">
-                  <h6 className="mb-0 fw-semibold text-success">Distribuição de CO₂ (Histograma)</h6>
+                  <h6 className="mb-0 fw-semibold text-success">Evolução de CO₂ (24 horas)</h6>
                 </Card.Header>
                 <Card.Body>
                   <ResponsiveContainer width="100%" height={280}>
-                    <BarChart data={[
-                      { faixa: '0-2', qtd: 145, color: '#4caf50' },
-                      { faixa: '2-4', qtd: 98, color: '#8bc34a' },
-                      { faixa: '4-6', qtd: 76, color: '#ffeb3b' },
-                      { faixa: '6-8', qtd: 35, color: '#ff9800' },
-                      { faixa: '8+', qtd: 12, color: '#f44336' },
-                    ]}>
+                    <LineChart data={co2History.slice(-24)}>
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="faixa" label={{ value: 'Faixa CO₂ (ppm)', position: 'insideBottom', offset: -5 }} />
-                      <YAxis label={{ value: 'Frequência', angle: -90, position: 'insideLeft' }} />
-                      <Tooltip />
-                      <Bar dataKey="qtd" name="Leituras">
-                        {[
-                          { faixa: '0-2', qtd: 145, color: '#4caf50' },
-                          { faixa: '2-4', qtd: 98, color: '#8bc34a' },
-                          { faixa: '4-6', qtd: 76, color: '#ffeb3b' },
-                          { faixa: '6-8', qtd: 35, color: '#ff9800' },
-                          { faixa: '8+', qtd: 12, color: '#f44336' },
-                        ].map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Bar>
-                    </BarChart>
+                      <XAxis 
+                        dataKey="ts" 
+                        type="number"
+                        scale="time"
+                        domain={['dataMin', 'dataMax']}
+                        tickFormatter={(ts) => new Date(ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                        label={{ value: 'Horário', position: 'insideBottom', offset: -5 }} 
+                      />
+                      <YAxis label={{ value: 'CO₂ (ppm)', angle: -90, position: 'insideLeft' }} />
+                      <Tooltip 
+                        labelFormatter={(ts) => new Date(ts).toLocaleString('pt-BR')}
+                        formatter={(value) => [value.toFixed(2) + ' ppm', 'CO₂']}
+                      />
+                      <Line type="monotone" dataKey="co2" stroke="#4caf50" strokeWidth={2} name="CO₂" dot={{ r: 3 }} />
+                    </LineChart>
                   </ResponsiveContainer>
                   <small className="text-muted d-block mt-2">
-                    <strong>Interpretação:</strong> Mostra a distribuição de frequência das leituras de CO₂. 
-                    A maioria está na faixa 0-2 ppm (normal para o sensor).
+                    <strong>Interpretação:</strong> Acompanhe as variações de CO₂ ao longo do dia. 
+                    Valores acima de 1000 ppm indicam necessidade de ventilação.
                   </small>
                 </Card.Body>
               </Card>
@@ -317,27 +311,37 @@ const Dashboard = () => {
             <Col lg={6}>
               <Card className="shadow-sm border-0 h-100">
                 <Card.Header className="bg-danger bg-opacity-10 border-0">
-                  <h6 className="mb-0 fw-semibold text-danger">Distribuição de Temperatura (Histograma)</h6>
+                  <h6 className="mb-0 fw-semibold text-danger">Distribuição de Temperatura</h6>
                 </Card.Header>
                 <Card.Body>
                   <ResponsiveContainer width="100%" height={280}>
                     <BarChart data={[
-                      { faixa: '28-29', qtd: 25 },
-                      { faixa: '29-30', qtd: 68 },
-                      { faixa: '30-31', qtd: 142 },
-                      { faixa: '31-32', qtd: 89 },
-                      { faixa: '32+', qtd: 42 },
+                      { faixa: '<28°C', qtd: 25, color: '#2196f3' },
+                      { faixa: '28-29°C', qtd: 68, color: '#4caf50' },
+                      { faixa: '29-30°C', qtd: 142, color: '#8bc34a' },
+                      { faixa: '30-31°C', qtd: 89, color: '#ffeb3b' },
+                      { faixa: '>31°C', qtd: 42, color: '#ff5722' },
                     ]}>
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="faixa" label={{ value: 'Faixa Temp (°C)', position: 'insideBottom', offset: -5 }} />
+                      <XAxis dataKey="faixa" label={{ value: 'Faixa de Temperatura', position: 'insideBottom', offset: -5 }} />
                       <YAxis label={{ value: 'Frequência', angle: -90, position: 'insideLeft' }} />
                       <Tooltip />
-                      <Bar dataKey="qtd" name="Leituras" fill="#dc3545" />
+                      <Bar dataKey="qtd" name="Leituras">
+                        {[
+                          { color: '#2196f3' },
+                          { color: '#4caf50' },
+                          { color: '#8bc34a' },
+                          { color: '#ffeb3b' },
+                          { color: '#ff5722' },
+                        ].map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Bar>
                     </BarChart>
                   </ResponsiveContainer>
                   <small className="text-muted d-block mt-2">
-                    <strong>Interpretação:</strong> Distribuição de temperatura mostra maior concentração entre 30-31°C. 
-                    Ambiente com temperatura estável e elevada.
+                    <strong>Interpretação:</strong> Faixa confortável: 18-26°C. 
+                    Maior concentração entre 29-30°C indica ambiente quente.
                   </small>
                 </Card.Body>
               </Card>
@@ -373,42 +377,48 @@ const Dashboard = () => {
                     </ScatterChart>
                   </ResponsiveContainer>
                   <small className="text-muted d-block mt-2">
-                    <strong>Interpretação:</strong> Correlação negativa moderada (r≈-0.72). 
-                    Quando a temperatura sobe, a umidade relativa tende a cair (comportamento típico).
+                    <strong>Interpretação:</strong> Relação inversa entre temperatura e umidade. 
+                    Ar mais quente reduz umidade relativa. Ideal: 40-60%.
                   </small>
                 </Card.Body>
               </Card>
             </Col>
 
-            {/* Tendência Temporal */}
+            {/* Histograma de Umidade */}
             <Col lg={6}>
               <Card className="shadow-sm border-0 h-100">
-                <Card.Header className="bg-warning bg-opacity-10 border-0">
-                  <h6 className="mb-0 fw-semibold text-warning">Tendência de VOCs (Últimas Horas)</h6>
+                <Card.Header className="bg-info bg-opacity-10 border-0">
+                  <h6 className="mb-0 fw-semibold text-info">Distribuição de Umidade</h6>
                 </Card.Header>
                 <Card.Body>
                   <ResponsiveContainer width="100%" height={280}>
-                    <LineChart data={[
-                      { hora: '09:00', real: 5200, tendencia: 5100 },
-                      { hora: '10:00', real: 5350, tendencia: 5200 },
-                      { hora: '11:00', real: 5480, tendencia: 5300 },
-                      { hora: '12:00', real: 5420, tendencia: 5400 },
-                      { hora: '13:00', real: 5550, tendencia: 5500 },
-                      { hora: '14:00', real: 5620, tendencia: 5600 },
-                      { hora: '15:00', real: 5480, tendencia: 5700 },
+                    <BarChart data={[
+                      { faixa: '<30%', qtd: 8, color: '#ff9800' },
+                      { faixa: '30-40%', qtd: 45, color: '#ffeb3b' },
+                      { faixa: '40-50%', qtd: 178, color: '#4caf50' },
+                      { faixa: '50-60%', qtd: 98, color: '#2196f3' },
+                      { faixa: '>60%', qtd: 37, color: '#9c27b0' },
                     ]}>
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="hora" label={{ value: 'Horário', position: 'insideBottom', offset: -5 }} />
-                      <YAxis label={{ value: 'VOCs (ppb)', angle: -90, position: 'insideLeft' }} />
+                      <XAxis dataKey="faixa" label={{ value: 'Faixa de Umidade', position: 'insideBottom', offset: -5 }} />
+                      <YAxis label={{ value: 'Frequência', angle: -90, position: 'insideLeft' }} />
                       <Tooltip />
-                      <Legend />
-                      <Line type="monotone" dataKey="real" stroke="#ffc107" strokeWidth={2} name="Média Horária" dot={{ r: 4 }} />
-                      <Line type="monotone" dataKey="tendencia" stroke="#fd7e14" strokeWidth={2} strokeDasharray="5 5" name="Linha de Tendência" dot={false} />
-                    </LineChart>
+                      <Bar dataKey="qtd" name="Leituras">
+                        {[
+                          { color: '#ff9800' },
+                          { color: '#ffeb3b' },
+                          { color: '#4caf50' },
+                          { color: '#2196f3' },
+                          { color: '#9c27b0' },
+                        ].map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Bar>
+                    </BarChart>
                   </ResponsiveContainer>
                   <small className="text-muted d-block mt-2">
-                    <strong>Interpretação:</strong> VOCs mostram leve tendência de crescimento ao longo do dia. 
-                    Valores elevados mas ainda dentro da normalidade para ambientes internos.
+                    <strong>Interpretação:</strong> Faixa ideal: 40-60%. 
+                    Umidade muito baixa (&lt;30%) pode causar desconforto respiratório.
                   </small>
                 </Card.Body>
               </Card>
