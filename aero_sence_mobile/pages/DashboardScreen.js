@@ -7,6 +7,33 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 export default function DashboardScreen({ onHistorico, onConfiguracoes, onSair }) {
   const [perfilVisible, setPerfilVisible] = useState(false);
   const [sensorData, setSensorData] = useState(null);
+  const [co2History, setCo2History] = useState([]);
+
+  // Função para obter status do AQI
+  const getAqiStatus = (aqi) => {
+    if (!aqi) return { label: '--', color: '#999' };
+    if (aqi <= 50) return { label: 'BOM', color: '#4caf50' };
+    if (aqi <= 100) return { label: 'MODERADO', color: '#ffeb3b' };
+    if (aqi <= 150) return { label: 'INSALUBRE SENSÍVEIS', color: '#ff9800' };
+    if (aqi <= 200) return { label: 'INSALUBRE', color: '#f44336' };
+    if (aqi <= 300) return { label: 'MUITO INSALUBRE', color: '#9c27b0' };
+    return { label: 'PERIGOSO', color: '#7e0023' };
+  };
+
+  // Função para obter status do CO₂
+  const getCo2Status = (co2) => {
+    if (!co2) return { label: '--', color: '#999' };
+    if (co2 <= 600) return { label: 'Bom', color: '#4caf50' };
+    if (co2 <= 1000) return { label: 'Normal', color: '#8bc34a' };
+    if (co2 <= 1500) return { label: 'Aceitável', color: '#ffeb3b' };
+    if (co2 <= 2000) return { label: 'Elevado', color: '#ff9800' };
+    return { label: 'Muito Alto', color: '#f44336' };
+  };
+
+  const aqiValue = sensorData?.aqi || 50;
+  const aqiInfo = getAqiStatus(aqiValue);
+  const co2Value = sensorData?.co2 || null;
+  const co2Info = getCo2Status(co2Value);
 
   // Busca os dados mais recentes do sensor
   const fetchLatest = async () => {
@@ -19,9 +46,32 @@ export default function DashboardScreen({ onHistorico, onConfiguracoes, onSair }
     }
   };
 
+  // Busca histórico para o gráfico de CO₂
+  const fetchHistory = async () => {
+    try {
+      const res = await api.get('/sensor/history');
+      if (res && res.data && Array.isArray(res.data)) {
+        // Filtrar últimas 24 horas
+        const now = Date.now();
+        const last24h = res.data.filter(item => {
+          const timestamp = new Date(item.createdAt).getTime();
+          return now - timestamp <= 24 * 60 * 60 * 1000; // 24 horas em ms
+        });
+        // Extrai CO₂
+        setCo2History(last24h.map(item => item.co2 || 0));
+      }
+    } catch (e) {
+      // silencioso
+    }
+  };
+
   useEffect(() => {
     fetchLatest();
-    const id = setInterval(fetchLatest, 10000); // atualiza a cada 10s
+    fetchHistory();
+    const id = setInterval(() => {
+      fetchLatest();
+      fetchHistory();
+    }, 30000); // atualiza a cada 30s
     return () => clearInterval(id);
   }, []);
 
@@ -86,26 +136,52 @@ export default function DashboardScreen({ onHistorico, onConfiguracoes, onSair }
       </Modal>
 
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Índice de Qualidade do Ar - últimas 24 horas</Text>
+        <Text style={styles.cardTitle}>Nível de CO₂ - Últimas 24 horas</Text>
         <View style={styles.chartPlaceholder}>
-          {/* Aqui pode ser inserido um gráfico real futuramente */}
-          <Text style={styles.chartText}>[Gráfico]</Text>
+          {co2History.length > 0 ? (
+            <LineChart
+              data={{
+                labels: co2History.map((val, i) => {
+                  // Mostra label a cada 6 pontos para não poluir o eixo X
+                  return i % 6 === 0 ? String(i) : '';
+                }),
+                datasets: [{ data: co2History.length > 0 ? co2History : [0] }],
+              }}
+              width={Dimensions.get('window').width - 60}
+              height={180}
+              chartConfig={{
+                backgroundColor: '#fff',
+                backgroundGradientFrom: '#fff',
+                backgroundGradientTo: '#fff',
+                decimalPlaces: 0,
+                color: (opacity = 1) => `rgba(76, 175, 80, ${opacity})`,
+                labelColor: () => '#333',
+                style: { borderRadius: 8 },
+                propsForDots: { r: '3', strokeWidth: '1', stroke: '#4caf50' },
+              }}
+              bezier
+              style={{ borderRadius: 8 }}
+            />
+          ) : (
+            <Text style={styles.chartText}>Carregando dados de CO₂...</Text>
+          )}
         </View>
       </View>
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Índice de Qualidade do Ar</Text>
         <View style={styles.aqiCircle}>
-          <Text style={styles.aqiValue}>150</Text>
-          <Text style={styles.aqiStatus}>RUIM</Text>
+          <Text style={styles.aqiValue}>{aqiValue}</Text>
+          <Text style={[styles.aqiStatus, { color: aqiInfo.color }]}>{aqiInfo.label}</Text>
         </View>
       </View>
 
       <View style={styles.row}>
         <View style={styles.infoBox}>
-          <Text style={styles.infoValue}>{sensorData ? String(sensorData.co2) : '--'}</Text>
+          <Text style={styles.infoValue}>{co2Value || '--'}</Text>
           <Text style={styles.infoUnit}>ppm</Text>
           <Text style={styles.infoLabel}>Nível de CO²</Text>
+          <Text style={[styles.infoStatus, { color: co2Info.color }]}>{co2Info.label}</Text>
         </View>
         <View style={styles.infoBox}>
           <Text style={styles.infoValue}>{sensorData ? String(sensorData.vocs) : '--'}</Text>
@@ -233,11 +309,13 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   chartPlaceholder: {
-    height: 80,
-    backgroundColor: '#f0f0f0',
+    height: 180,
+    width: '100%',
+    backgroundColor: '#f9f9f9',
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
   },
   chartText: {
     color: '#bbb',
@@ -257,12 +335,12 @@ const styles = StyleSheet.create({
   aqiValue: {
     fontSize: 36,
     fontWeight: 'bold',
-    color: '#ff9900',
+    color: '#333',
   },
   aqiStatus: {
-    fontSize: 20,
+    fontSize: 14,
     fontWeight: 'bold',
-    color: '#ff9900',
+    marginTop: 4,
   },
   row: {
     flexDirection: 'row',
@@ -295,6 +373,12 @@ const styles = StyleSheet.create({
     color: '#222',
     marginTop: 2,
     fontWeight: 'bold',
+  },
+  infoStatus: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginTop: 4,
   },
   alertBox: {
     backgroundColor: '#fff',
