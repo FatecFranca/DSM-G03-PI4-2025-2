@@ -14,14 +14,30 @@ const SAMPLE_HISTORICAL = [
 import api from '../src/services/api';
 
 const getAqiBadge = (aqi) => {
-    if (aqi <= 50) return <Badge bg="success">Boa</Badge>;
-    if (aqi <= 100) return <Badge bg="warning">Moderada</Badge>;
-    return <Badge bg="danger">Insalubre</Badge>;
+    if (aqi <= 50) return <Badge bg="success">Bom</Badge>;
+    if (aqi <= 100) return <Badge bg="warning" text="dark">Moderado</Badge>;
+    if (aqi <= 150) return <Badge bg="warning">Insalubre para Sensíveis</Badge>;
+    if (aqi <= 200) return <Badge bg="danger">Insalubre</Badge>;
+    if (aqi <= 300) return <Badge bg="danger" style={{backgroundColor: '#8b008b'}}>Muito Insalubre</Badge>;
+    return <Badge bg="danger" style={{backgroundColor: '#7e0023'}}>Perigoso</Badge>;
+};
+
+const getCo2Badge = (co2Value) => {
+    const co2 = parseFloat(String(co2Value).replace(/[^0-9\.]/g, '')) || 0;
+    if (co2 === 0) return <span className="text-muted">--</span>;
+    if (co2 <= 600) return <span className="text-success"><ArrowDownCircleFill className="me-1" /> Bom</span>;
+    if (co2 <= 1000) return <span className="text-success"><ArrowDownCircleFill className="me-1" /> Normal</span>;
+    if (co2 <= 1500) return <span className="text-warning"><ArrowUpCircleFill className="me-1" /> Aceitável</span>;
+    if (co2 <= 2000) return <span className="text-danger"><ArrowUpCircleFill className="me-1" /> Elevado</span>;
+    return <span className="text-danger"><ArrowUpCircleFill className="me-1" /> Muito Alto</span>;
 };
 
 
 const Historico = () => {
     const [filter, setFilter] = useState('7d'); // Filtro padrão: 7 dias
+    const [showStats, setShowStats] = useState(false); // Toggle para mostrar estatísticas avançadas
+    const [estatisticas, setEstatisticas] = useState(null); // Estatísticas virão da API
+    const [loadingStats, setLoadingStats] = useState(false);
 
     // Estado para os dados históricos (inicializa com fallback normalizado)
     const normalizeSample = (r) => {
@@ -90,6 +106,30 @@ const Historico = () => {
         fetchHistory();
     }, []);
 
+    // Buscar estatísticas da API baseado no filtro
+    useEffect(() => {
+        const fetchStatistics = async () => {
+            setLoadingStats(true);
+            try {
+                // Mapear filtro para período da API
+                let period = filter === 'today' ? '24h' : filter;
+                const res = await api.get(`/sensor/statistics?period=${period}`);
+                setEstatisticas({
+                    co2: res.data.co2,
+                    temperatura: res.data.temperatura,
+                    umidade: res.data.umidade,
+                });
+            } catch (err) {
+                console.error('Erro ao buscar estatísticas:', err);
+                // Mantém null, componente vai lidar com isso
+            } finally {
+                setLoadingStats(false);
+            }
+        };
+
+        fetchStatistics();
+    }, [filter]); // Recarrega quando o filtro muda
+
     // Cálculos de média (baseados nos registros filtrados)
     const len = filteredData.length;
     let averageAqi = '--';
@@ -151,7 +191,7 @@ const Historico = () => {
                                 <Card.Body>
                                     <h6 className="text-muted mb-3">Média de AQI (7 dias)</h6>
                                     <h2 className="fw-bold display-5">{averageAqi}</h2>
-                                    <Badge bg="warning">Moderada</Badge>
+                                    {typeof averageAqi === 'number' ? getAqiBadge(averageAqi) : <Badge bg="secondary">Sem dados</Badge>}
                                 </Card.Body>
                             </Card>
                         </Col>
@@ -160,7 +200,7 @@ const Historico = () => {
                                 <Card.Body>
                                     <h6 className="text-muted mb-3">Pico de CO₂ (7 dias)</h6>
                                     <h2 className="fw-bold display-5">{peakCo2}</h2>
-                                    <span className="text-danger"><ArrowUpCircleFill className="me-1" /> Elevado</span>
+                                    {getCo2Badge(peakCo2)}
                                 </Card.Body>
                             </Card>
                         </Col>
@@ -194,6 +234,137 @@ const Historico = () => {
                             </Card>
                         </Col>
                     </Row>
+
+                    {/* --- ESTATÍSTICAS AVANÇADAS --- */}
+                    <Card className="shadow-sm border-0 mb-4">
+                        <Card.Header className="bg-light d-flex justify-content-between align-items-center">
+                            <h5 className="mb-0 fw-semibold">Análise Estatística Detalhada</h5>
+                            <Button 
+                                variant="outline-primary" 
+                                size="sm" 
+                                onClick={() => setShowStats(!showStats)}
+                            >
+                                {showStats ? 'Ocultar' : 'Mostrar'} Estatísticas
+                            </Button>
+                        </Card.Header>
+                        {showStats && (
+                            <Card.Body>
+                                {loadingStats ? (
+                                    <div className="text-center p-4">
+                                        <div className="spinner-border text-primary" role="status">
+                                            <span className="visually-hidden">Carregando...</span>
+                                        </div>
+                                        <p className="mt-2 text-muted">Calculando estatísticas...</p>
+                                    </div>
+                                ) : !estatisticas ? (
+                                    <div className="text-center p-4 text-muted">
+                                        <p>Não foi possível carregar as estatísticas.</p>
+                                    </div>
+                                ) : (
+                                <>
+                                <Row className="g-4">
+                                    {/* CO₂ */}
+                                    <Col md={4}>
+                                        <h6 className="text-primary fw-bold mb-3">CO₂ (ppm)</h6>
+                                        <Table size="sm" bordered>
+                                            <tbody>
+                                                <tr><td>Média</td><td className="fw-bold">{estatisticas.co2.media}</td></tr>
+                                                <tr><td>Mediana</td><td className="fw-bold">{estatisticas.co2.mediana}</td></tr>
+                                                <tr><td>Desvio Padrão</td><td className="fw-bold">{estatisticas.co2.desvioPadrao}</td></tr>
+                                                <tr><td>Mínimo</td><td className="fw-bold">{estatisticas.co2.minimo}</td></tr>
+                                                <tr><td>Máximo</td><td className="fw-bold">{estatisticas.co2.maximo}</td></tr>
+                                                <tr><td>Assimetria</td><td className="fw-bold">{estatisticas.co2.assimetria.toFixed(2)}</td></tr>
+                                                <tr><td>Coef. Variação</td><td className="fw-bold">{estatisticas.co2.coefVariacao}%</td></tr>
+                                                <tr><td>Percentil 95</td><td className="fw-bold">{estatisticas.co2.percentil95}</td></tr>
+                                                <tr><td>% Tempo Crítico</td><td className="fw-bold text-danger">{estatisticas.co2.tempoRisco}%</td></tr>
+                                            </tbody>
+                                        </Table>
+                                        <small className="text-muted">
+                                            <strong>Interpretação:</strong> {estatisticas.co2.media > 1000 ? 'CO₂ médio elevado. Ventilação recomendada.' : 'CO₂ médio está dentro do normal.'}
+                                        </small>
+                                    </Col>
+
+                                    {/* Temperatura */}
+                                    <Col md={4}>
+                                        <h6 className="text-primary fw-bold mb-3">Temperatura (°C)</h6>
+                                        <Table size="sm" bordered>
+                                            <tbody>
+                                                <tr><td>Média</td><td className="fw-bold">{estatisticas.temperatura.media}</td></tr>
+                                                <tr><td>Mediana</td><td className="fw-bold">{estatisticas.temperatura.mediana}</td></tr>
+                                                <tr><td>Desvio Padrão</td><td className="fw-bold">{estatisticas.temperatura.desvioPadrao}</td></tr>
+                                                <tr><td>Mínimo</td><td className="fw-bold">{estatisticas.temperatura.minimo}</td></tr>
+                                                <tr><td>Máximo</td><td className="fw-bold">{estatisticas.temperatura.maximo}</td></tr>
+                                                <tr><td>Assimetria</td><td className="fw-bold">{estatisticas.temperatura.assimetria.toFixed(2)}</td></tr>
+                                                <tr><td>Coef. Variação</td><td className="fw-bold">{estatisticas.temperatura.coefVariacao}%</td></tr>
+                                                <tr><td>Percentil 95</td><td className="fw-bold">{estatisticas.temperatura.percentil95}</td></tr>
+                                                <tr><td>% Tempo Crítico</td><td className="fw-bold text-success">{estatisticas.temperatura.tempoRisco}%</td></tr>
+                                            </tbody>
+                                        </Table>
+                                        <small className="text-muted">
+                                            <strong>Interpretação:</strong> Temperatura estável com baixa variação. 
+                                            Ambiente termicamente confortável na maior parte do tempo.
+                                        </small>
+                                    </Col>
+
+                                    {/* Umidade */}
+                                    <Col md={4}>
+                                        <h6 className="text-primary fw-bold mb-3">Umidade (%)</h6>
+                                        <Table size="sm" bordered>
+                                            <tbody>
+                                                <tr><td>Média</td><td className="fw-bold">{estatisticas.umidade.media}</td></tr>
+                                                <tr><td>Mediana</td><td className="fw-bold">{estatisticas.umidade.mediana}</td></tr>
+                                                <tr><td>Desvio Padrão</td><td className="fw-bold">{estatisticas.umidade.desvioPadrao}</td></tr>
+                                                <tr><td>Mínimo</td><td className="fw-bold">{estatisticas.umidade.minimo}</td></tr>
+                                                <tr><td>Máximo</td><td className="fw-bold">{estatisticas.umidade.maximo}</td></tr>
+                                                <tr><td>Assimetria</td><td className="fw-bold">{estatisticas.umidade.assimetria.toFixed(2)}</td></tr>
+                                                <tr><td>Coef. Variação</td><td className="fw-bold">{estatisticas.umidade.coefVariacao}%</td></tr>
+                                                <tr><td>Percentil 95</td><td className="fw-bold">{estatisticas.umidade.percentil95}</td></tr>
+                                                <tr><td>% Tempo Crítico</td><td className="fw-bold text-warning">{estatisticas.umidade.tempoRisco}%</td></tr>
+                                            </tbody>
+                                        </Table>
+                                        <small className="text-muted">
+                                            <strong>Interpretação:</strong> Umidade dentro da faixa ideal (40-60%). 
+                                            Baixo risco de desconforto ou problemas respiratórios.
+                                        </small>
+                                    </Col>
+                                </Row>
+
+                                {/* Explicações técnicas */}
+                                <hr className="my-4" />
+                                <Row>
+                                    <Col>
+                                        <h6 className="text-secondary fw-bold mb-3">Glossário Estatístico</h6>
+                                        <Row className="g-3">
+                                            <Col md={4}>
+                                                <strong>Média:</strong> Valor típico no período.
+                                            </Col>
+                                            <Col md={4}>
+                                                <strong>Mediana:</strong> Valor central (menos afetado por picos).
+                                            </Col>
+                                            <Col md={4}>
+                                                <strong>Desvio Padrão:</strong> Quanto os valores variam da média.
+                                            </Col>
+                                            <Col md={4}>
+                                                <strong>Assimetria:</strong> Distribuição "torta" (+: mais valores baixos, -: mais valores altos).
+                                            </Col>
+                                            <Col md={4}>
+                                                <strong>Coef. Variação:</strong> Variabilidade relativa (%) em relação à média.
+                                            </Col>
+                                            <Col md={4}>
+                                                <strong>Percentil 95:</strong> 95% do tempo o valor ficou abaixo deste limite.
+                                            </Col>
+                                            <Col md={4}>
+                                                <strong>% Tempo Crítico:</strong> Porcentagem do tempo em níveis preocupantes.
+                                            </Col>
+                                        </Row>
+                                    </Col>
+                                </Row>
+                                </>
+                                )}
+                            </Card.Body>
+                        )}
+                    </Card>
+
                     {/* --- TABELA DE REGISTROS --- */}
                     <Card className="shadow-sm border-0">
                         <Card.Header className="d-flex justify-content-between align-items-center bg-light">

@@ -1,10 +1,11 @@
 // Bloco de Rotas 1 CORRIGIDO (routes/index.ts)
 
 import { Router } from 'express';
-import { createSensorData, getLatestSensorData } from '../controllers/sensorController.js';
+import { createSensorData, getLatestSensorData, getSensorHistory, createSensorBatch } from '../controllers/sensorController.js';
 import { getUserProfile, updateUserProfile, deleteUserAccount, changePassword } from '../controllers/userController.js'; 
 import { protect } from '../middleware/authMiddleware.js';
 import { register, login, forgotPassword, resetPassword } from '../controllers/authController.js';
+import { getStatistics } from '../controllers/statsController.js';
 
 const router = Router();
 
@@ -13,6 +14,9 @@ router.post('/auth/login', login);
 
 // AÇÃO CRÍTICA: Removido 'protect' para permitir o envio do ESP32 (Erro 401 resolvido)
 router.post('/sensor', createSensorData); 
+router.post('/sensor/batch', createSensorBatch);
+router.get('/sensor/history', getSensorHistory);
+router.get('/sensor/statistics', getStatistics);
 
 // Rotas de Sensor e Usuário que precisam de autenticação permanecem protegidas
 router.get('/sensor/latest', protect, getLatestSensorData);

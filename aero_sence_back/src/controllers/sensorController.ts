@@ -62,4 +62,50 @@ export const getLatestSensorData = async (req: Request, res: Response) => {
         res.status(500).json({ message: 'Erro ao buscar os dados mais recentes.' });
     }
 };
-// Se o getSensorHistory estiver no seu arquivo, mantenha-o.
+// Histórico limitado (últimos N)
+export const getSensorHistory = async (req: Request, res: Response) => {
+    try {
+        const history = await prisma.sensorData.findMany({
+            orderBy: { createdAt: 'desc' },
+            take: 500,
+        });
+        res.json(history);
+    } catch (error) {
+        console.error('Erro ao buscar histórico:', error);
+        res.status(500).json({ message: 'Erro ao buscar histórico.' });
+    }
+};
+
+// Recebe lote de leituras para quando o dispositivo armazenou offline
+interface BatchItem {
+    aqi: number; co2: number; vocs: number; nox: number; temperature: number; humidity: number; createdAt?: string;
+}
+
+export const createSensorBatch = async (req: Request<{}, {}, { readings: BatchItem[] }>, res: Response) => {
+    const { readings } = req.body;
+    if (!Array.isArray(readings) || readings.length === 0) {
+        return res.status(400).json({ message: 'Array readings vazio ou inválido.' });
+    }
+    // Valida cada item rapidamente
+    const invalid = readings.find(r => [r.aqi, r.co2, r.vocs, r.nox, r.temperature, r.humidity].some(v => v === undefined));
+    if (invalid) {
+        return res.status(400).json({ message: 'Um ou mais itens do lote estão incompletos.' });
+    }
+    try {
+        // Usa createMany para eficiência; ignora createdAt custom se fornecido fora do range
+        const prepared = readings.map(r => ({
+            aqi: Number(r.aqi),
+            co2: Number(r.co2),
+            vocs: Number(r.vocs),
+            nox: Number(r.nox),
+            temperature: Number(r.temperature),
+            humidity: Number(r.humidity),
+            createdAt: r.createdAt ? new Date(r.createdAt) : undefined,
+        }));
+        const result = await prisma.sensorData.createMany({ data: prepared });
+        res.status(201).json({ inserted: result.count });
+    } catch (error) {
+        console.error('Erro ao inserir lote:', error);
+        res.status(500).json({ message: 'Falha ao inserir lote.' });
+    }
+};

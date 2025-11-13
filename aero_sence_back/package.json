@@ -31,6 +31,7 @@
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
     "nodemailer": "^7.0.6",
-    "prisma": "^6.15.0"
+    "prisma": "^6.15.0",
+    "simple-statistics": "^7.8.8"
   }
 }
