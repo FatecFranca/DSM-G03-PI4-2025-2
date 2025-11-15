@@ -37,6 +37,7 @@ const Historico = () => {
     const [filter, setFilter] = useState('7d'); // Filtro padrão: 7 dias
     const [showStats, setShowStats] = useState(false); // Toggle para mostrar estatísticas avançadas
     const [estatisticas, setEstatisticas] = useState(null); // Estatísticas virão da API
+    const [estatisticas7d, setEstatisticas7d] = useState(null); // Estatísticas fixas de 7 dias
     const [loadingStats, setLoadingStats] = useState(false);
 
     // Estado para os dados históricos (inicializa com fallback normalizado)
@@ -107,6 +108,7 @@ const Historico = () => {
     }, []);
 
     // Buscar estatísticas da API baseado no filtro
+    // Estatísticas do filtro atual
     useEffect(() => {
         const fetchStatistics = async () => {
             setLoadingStats(true);
@@ -126,17 +128,33 @@ const Historico = () => {
                 setLoadingStats(false);
             }
         };
-
         fetchStatistics();
-    }, [filter]); // Recarrega quando o filtro muda
+    }, [filter]);
+
+    // Estatísticas fixas de 7 dias (independente do filtro)
+    useEffect(() => {
+        const fetchStatistics7d = async () => {
+            try {
+                const res = await api.get('/sensor/statistics?period=7d');
+                setEstatisticas7d({
+                    co2: res.data.co2,
+                    temperatura: res.data.temperatura,
+                    umidade: res.data.umidade,
+                });
+            } catch (err) {
+                console.error('Erro ao buscar estatísticas 7d:', err);
+            }
+        };
+        fetchStatistics7d();
+    }, []);
 
     // Cálculos de média (baseados nos registros filtrados)
     const len = filteredData.length;
     let averageAqi = '--';
     let peakCo2 = '--';
     let averageVocs = '--';
-    let averageTemperature = '--';
-    let averageHumidity = '--';
+    let averageNox = '--';
+    let averageCo2 = '--';
 
     if (len > 0) {
         averageAqi = Math.round(filteredData.reduce((s, r) => s + (r.aqi || 0), 0) / len);
@@ -146,8 +164,8 @@ const Historico = () => {
         }, 0);
         peakCo2 = peak ? peak + ' ppm' : '--';
         averageVocs = Math.round(filteredData.reduce((s, r) => s + (parseFloat(String(r.vocs).replace(/[^0-9\.]/g, '')) || 0), 0) / len) + ' ppb';
-        averageTemperature = (filteredData.reduce((s, r) => s + (parseFloat(String(r.temperature).replace(/[^0-9\.]/g, '')) || 0), 0) / len).toFixed(1) + ' °C';
-        averageHumidity = Math.round(filteredData.reduce((s, r) => s + (parseFloat(String(r.humidity).replace(/[^0-9\.]/g, '')) || 0), 0) / len) + ' %';
+        averageNox = (filteredData.reduce((s, r) => s + (parseFloat(String(r.nox).replace(/[^0-9\.]/g, '')) || 0), 0) / len).toFixed(3) + ' ppm';
+        // averageCo2 será preenchido pelo backend
     }
 
     // Pequeno efeito de debug: loga counts por filtro para ajudar a diagnosticar problemas
@@ -215,21 +233,21 @@ const Historico = () => {
                         </Col>
                     </Row>
 
-                    {/* Linha adicional para Temperatura e Umidade médias */}
+                    {/* Linha adicional para NOx e CO₂ médias */}
                     <Row className="g-4 mb-4">
                         <Col md={6}>
                             <Card className="text-center shadow-sm border-0 h-100">
                                 <Card.Body>
-                                    <h6 className="text-muted mb-3">Temperatura Média (7 dias)</h6>
-                                    <h2 className="fw-bold display-5">{averageTemperature}</h2>
+                                    <h6 className="text-muted mb-3">Média de NOx (7 dias)</h6>
+                                    <h2 className="fw-bold display-5">{averageNox}</h2>
                                 </Card.Body>
                             </Card>
                         </Col>
                         <Col md={6}>
                             <Card className="text-center shadow-sm border-0 h-100">
                                 <Card.Body>
-                                    <h6 className="text-muted mb-3">Umidade Média (7 dias)</h6>
-                                    <h2 className="fw-bold display-5">{averageHumidity}</h2>
+                                    <h6 className="text-muted mb-3">Média de CO₂ (7 dias)</h6>
+                                    <h2 className="fw-bold display-5">{estatisticas7d && estatisticas7d.co2 && estatisticas7d.co2.media ? estatisticas7d.co2.media + ' ppm' : '--'}</h2>
                                 </Card.Body>
                             </Card>
                         </Col>
