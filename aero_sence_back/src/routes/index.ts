@@ -1,7 +1,7 @@
 // Bloco de Rotas 1 CORRIGIDO (routes/index.ts)
 
 import { Router } from 'express';
-import { createSensorData, getLatestSensorData, getSensorHistory, createSensorBatch } from '../controllers/sensorController.js';
+import { createSensorData, getLatestSensorData, getSensorHistory, createSensorBatch, getCo2Forecast } from '../controllers/sensorController.js';
 import { getUserProfile, updateUserProfile, deleteUserAccount, changePassword } from '../controllers/userController.js'; 
 import { protect } from '../middleware/authMiddleware.js';
 import { register, login, forgotPassword, resetPassword } from '../controllers/authController.js';
@@ -17,6 +17,7 @@ router.post('/sensor', createSensorData);
 router.post('/sensor/batch', createSensorBatch);
 router.get('/sensor/history', getSensorHistory);
 router.get('/sensor/statistics', getStatistics);
+router.get('/sensor/forecast-co2', getCo2Forecast);
 
 // Rotas de Sensor e Usuário que precisam de autenticação permanecem protegidas
 router.get('/sensor/latest', protect, getLatestSensorData);

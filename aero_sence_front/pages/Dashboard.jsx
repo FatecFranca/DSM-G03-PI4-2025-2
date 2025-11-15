@@ -123,7 +123,7 @@ const Dashboard = () => {
         });
         setHistory7d(history7d);
 
-        // Gráfico de tendência de CO2 (últimas 24h)
+        // Gráfico de tendência de CO₂ (últimas 24h - dados reais, sem agregação)
         const startWindow = now - 24 * 60 * 60 * 1000;
         const last24h = response.data.filter(item => {
           if (!item.createdAt) return false;
@@ -131,95 +131,40 @@ const Dashboard = () => {
           return ts >= startWindow && ts <= now;
         });
         last24h.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-        // Usar apenas os pontos reais coletados
         const chartData = last24h.map(item => ({
           ts: item.createdAt ? new Date(item.createdAt).getTime() : 0,
           co2: typeof item.co2 === 'number' ? item.co2 : 0,
         })).filter(d => d.ts && !isNaN(d.ts));
         setCo2History(chartData);
-
-        // Previsão futura de CO2 (regressão linear simples)
-        if (chartData.length > 5) {
-          try {
-            const xArr = chartData.map((d, i) => (d.ts - chartData[0].ts) / (1000 * 60 * 60));
-            const yArr = chartData.map(d => d.co2);
-            const n = xArr.length;
-            const sumX = xArr.reduce((a, b) => a + b, 0);
-            const sumY = yArr.reduce((a, b) => a + b, 0);
-            const sumXY = xArr.reduce((a, b, i) => a + b * yArr[i], 0);
-            const sumXX = xArr.reduce((a, b) => a + b * b, 0);
-            const meanX = sumX / n;
-            const meanY = sumY / n;
-            const b = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
-            const a = meanY - b * meanX;
-            
-            // Validar se a tendência é razoável
-            const minCo2 = Math.min(...yArr);
-            const maxCo2 = Math.max(...yArr);
-            const rangeCo2 = maxCo2 - minCo2;
-            
-            const yHat = xArr.map(x => a + b * x);
-            const residuals = yArr.map((y, i) => y - yHat[i]);
-            const sse = residuals.reduce((s, r) => s + r * r, 0);
-            const se = Math.sqrt(sse / (n - 2));
-            const z = 2.576; // 99% IC
-            const forecast = [];
-            const ci = [];
-            const lastTs = chartData[chartData.length - 1].ts;
-            const lastCo2 = chartData[chartData.length - 1].co2;
-            const now = new Date();
-            const futureBase = new Date(now);
-            futureBase.setHours(now.getHours() + 1, 0, 0, 0);
-            
-            // Ticks: próximas 24h a partir de agora, em intervalos de 6h: +1h, +6h, +12h, +18h, +24h
-            const hoursAhead = [1, 6, 12, 18, 24];
-            for (let i = 0; i < hoursAhead.length; i++) {
-              const h = hoursAhead[i];
-              const ts = now.getTime() + h * 60 * 60 * 1000;
-              const x = xArr[xArr.length - 1] + (ts - lastTs) / (1000 * 60 * 60);
-              let y = a + b * x;
-              
-              // Limitar a variação da previsão para não fugir demais da realidade
-              // Se a inclinação for muito forte, usar média + variação conservadora
-              if (Math.abs(b) * h > rangeCo2 * 2) {
-                // Tendência muito forte, usar valor conservador
-                y = lastCo2 + b * h * 0.5; // Reduzir pela metade a tendência
-              }
-              
-              const sePred = se * Math.sqrt(1 + 1 / n + Math.pow(x - meanX, 2) / (sumXX - n * meanX * meanX));
-              let upper = y + z * sePred;
-              let lower = y - z * sePred;
-              
-              // Garantir valores realistas: mínimo 0, máximo razoável (5x a média atual)
-              const maxRealistic = meanY * 5;
-              y = Math.max(0, Math.min(y, maxRealistic));
-              upper = Math.max(0, Math.min(upper, maxRealistic));
-              lower = Math.max(0, lower);
-              
-              forecast.push({ ts, co2: y });
-              ci.push({ ts, upper, lower });
-            }
-            setCo2Forecast(forecast);
-            setForecastCI(ci);
-          } catch (err) {
-            console.error('Erro ao calcular previsão de CO₂:', err);
-            setCo2Forecast([]);
-            setForecastCI([]);
-          }
-        } else {
-          setCo2Forecast([]);
-          setForecastCI([]);
-        }
       } catch (error) {
         console.error('Erro ao buscar histórico:', error);
       }
     };
 
+    const fetchForecast = async () => {
+      try {
+        const response = await api.get('/sensor/forecast-co2');
+        if (response.data && Array.isArray(response.data.forecast) && Array.isArray(response.data.ci)) {
+          setCo2Forecast(response.data.forecast);
+          setForecastCI(response.data.ci);
+        } else {
+          setCo2Forecast([]);
+          setForecastCI([]);
+        }
+      } catch (error) {
+        console.error('Erro ao buscar previsão de CO₂:', error);
+        setCo2Forecast([]);
+        setForecastCI([]);
+      }
+    };
+
     fetchSensorData();
     fetchHistory();
+    fetchForecast();
     const interval = setInterval(() => {
       fetchSensorData();
       fetchHistory();
+      fetchForecast();
     }, 60000);
     return () => clearInterval(interval);
   }, []);
@@ -318,26 +263,44 @@ const Dashboard = () => {
                             }}
                           />
                           <YAxis label={{ value: 'ppm', angle: -90, position: 'insideLeft' }} />
-                          <Tooltip labelFormatter={(value) => new Date(value).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                            formatter={(value, name) => {
+                          <Tooltip
+                            labelFormatter={(ts) => new Date(ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                            formatter={(value, name, props) => {
+                              if (name !== 'Previsão CO₂ (próximas 24h)' && name !== 'co2') {
+                                // ignora séries auxiliares no conteúdo, mas deixa o horário
+                                return null;
+                              }
+
                               if (typeof value === 'number' && value < 0) value = 0;
-                              return [`${value.toFixed(2)}`, name];
+
+                              // Encontrar o intervalo correspondente (upper/lower) para este timestamp
+                              const ts = props && props.payload && props.payload.ts;
+                              let intervalo = null;
+                              if (ts && forecastCI && forecastCI.length) {
+                                const ponto = forecastCI.find(p => p.ts === ts);
+                                if (ponto && typeof ponto.upper === 'number' && typeof ponto.lower === 'number') {
+                                  const mid = (ponto.upper + ponto.lower) / 2;
+                                  intervalo = Math.abs(ponto.upper - mid);
+                                }
+                              }
+
+                              const base = `${Number(value).toFixed(2)} ppm`;
+                              if (intervalo !== null) {
+                                return [`${base} ± ${intervalo.toFixed(2)} ppm`, 'Previsão CO₂ (99% IC)'];
+                              }
+                              return [base, 'Previsão CO₂'];
                             }}
                           />
                           {/* Faixa de IC 99% */}
                           {isValidCI && (
-                            <>
-                              <Line type="monotone" dataKey="upper" data={forecastCI} stroke="#0d6efd" strokeDasharray="2 2" dot={false} legendType="none" hide={true} />
-                              <Line type="monotone" dataKey="lower" data={forecastCI} stroke="#0d6efd" strokeDasharray="2 2" dot={false} legendType="none" hide={true} />
-                              <Area
-                                type="monotone"
-                                dataKey="upper"
-                                data={forecastCI.map((d, i) => ({ ...d, upper: d.upper, lower: d.lower }))}
-                                fill="#0d6efd"
-                                fillOpacity={0.12}
-                                isAnimationActive={false}
-                              />
-                            </>
+                            <Area
+                              type="monotone"
+                              dataKey="upper"
+                              data={forecastCI.map(d => ({ ...d, upper: d.upper }))}
+                              fill="#0d6efd"
+                              fillOpacity={0.12}
+                              isAnimationActive={false}
+                            />
                           )}
                           <Line type="monotone" dataKey="co2" name="Previsão CO₂ (próximas 24h)" stroke="#0d6efd" strokeDasharray="6 4" dot={{ r: 5 }} data={co2Forecast} />
                           <Legend formatter={(value) => {
