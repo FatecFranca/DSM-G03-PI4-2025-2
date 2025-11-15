@@ -5,9 +5,18 @@ import apiRoutes from './routes/index.js';
 
 dotenv.config();
 const app = express();
-app.use(cors());
-app.use(express.json());
 
+const allowedOrigins = ['http://localhost:5174', 'http://172.203.135.173'];
+
+app.use(cors({
+  origin: allowedOrigins,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+}));
+
+app.options('*', cors());
+app.use(express.json());
 
 app.use('/api', apiRoutes);
 
