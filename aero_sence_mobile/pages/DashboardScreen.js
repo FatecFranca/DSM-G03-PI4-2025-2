@@ -4,10 +4,13 @@ import { LineChart } from 'react-native-chart-kit';
 import { MaterialIcons } from '@expo/vector-icons';
 import api from '../src/services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
 export default function DashboardScreen({ onHistorico, onConfiguracoes, onSair }) {
   const [perfilVisible, setPerfilVisible] = useState(false);
   const [sensorData, setSensorData] = useState(null);
-  const [co2History, setCo2History] = useState([]);
+  const [co2History, setCo2History] = useState([]);    // histórico real (ts + co2)
+  const [history7d, setHistory7d] = useState([]);      // últimos 7 dias para composição
+  const [co2Forecast, setCo2Forecast] = useState([]);  // previsão próximas 24h
 
   // Função para obter status do AQI
   const getAqiStatus = (aqi) => {
@@ -30,10 +33,41 @@ export default function DashboardScreen({ onHistorico, onConfiguracoes, onSair }
     return { label: 'Muito Alto', color: '#f44336' };
   };
 
-  const aqiValue = sensorData?.aqi || 50;
+  const aqiValue = sensorData?.aqi ?? 50;
   const aqiInfo = getAqiStatus(aqiValue);
-  const co2Value = sensorData?.co2 || null;
+  const co2Value = sensorData?.co2 ?? null;
   const co2Info = getCo2Status(co2Value);
+
+  // Composição de poluentes (média dos últimos 7 dias, similar ao front)
+  const computeComposition = () => {
+    if (!history7d || history7d.length === 0) {
+      return [
+        { label: 'CO₂', value: '--' },
+        { label: 'VOCs', value: '--' },
+        { label: 'NOx', value: '--' },
+      ];
+    }
+    let sumCo2 = 0;
+    let sumVocs = 0;
+    let sumNox = 0;
+    history7d.forEach((item) => {
+      sumCo2 += typeof item.co2 === 'number' ? item.co2 : 0;
+      sumVocs += typeof item.vocs === 'number' ? item.vocs : 0;
+      sumNox += typeof item.nox === 'number' ? item.nox : 0;
+    });
+    const count = history7d.length || 1;
+    const avgCo2 = sumCo2 / count;
+    const avgVocsPpm = (sumVocs / count) / 1000; // converte para ppm aproximado
+    const avgNox = sumNox / count;
+    const total = avgCo2 + avgVocsPpm + avgNox || 1;
+    return [
+      { label: 'CO₂', value: `${((avgCo2 / total) * 100).toFixed(1)}%` },
+      { label: 'VOCs', value: `${((avgVocsPpm / total) * 100).toFixed(1)}%` },
+      { label: 'NOx', value: `${((avgNox / total) * 100).toFixed(1)}%` },
+    ];
+  };
+
+  const composition = computeComposition();
 
   // Busca os dados mais recentes do sensor
   const fetchLatest = async () => {
@@ -46,31 +80,64 @@ export default function DashboardScreen({ onHistorico, onConfiguracoes, onSair }
     }
   };
 
-  // Busca histórico para o gráfico de CO₂
+  // Busca histórico para o gráfico de CO₂ e composição (similar ao front)
   const fetchHistory = async () => {
     try {
       const res = await api.get('/sensor/history');
       if (res && res.data && Array.isArray(res.data)) {
-        // Filtrar últimas 24 horas
         const now = Date.now();
-        const last24h = res.data.filter(item => {
-          const timestamp = new Date(item.createdAt).getTime();
-          return now - timestamp <= 24 * 60 * 60 * 1000; // 24 horas em ms
+        // Últimos 7 dias para composição
+        const cutoff7d = now - 7 * 24 * 60 * 60 * 1000;
+        const last7d = res.data.filter((item) => {
+          if (!item.createdAt) return false;
+          const ts = new Date(item.createdAt).getTime();
+          return ts && ts >= cutoff7d && ts <= now;
         });
-        // Extrai CO₂
-        setCo2History(last24h.map(item => item.co2 || 0));
+        setHistory7d(last7d);
+
+        // Histórico de CO₂ das últimas 24h (semelhante ao front)
+        const cutoff24h = now - 24 * 60 * 60 * 1000;
+        const last24h = res.data.filter((item) => {
+          if (!item.createdAt) return false;
+          const ts = new Date(item.createdAt).getTime();
+          return ts && ts >= cutoff24h && ts <= now;
+        });
+        last24h.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+        const points = last24h
+          .map((item) => ({
+            ts: item.createdAt ? new Date(item.createdAt).getTime() : 0,
+            co2: typeof item.co2 === 'number' ? item.co2 : 0,
+          }))
+          .filter((p) => p.ts && !Number.isNaN(p.ts));
+        setCo2History(points);
       }
     } catch (e) {
       // silencioso
     }
   };
 
+  // Busca previsão de CO₂ (próximas 24h) do backend
+  const fetchForecast = async () => {
+    try {
+      const res = await api.get('/sensor/forecast-co2');
+      if (res && res.data && Array.isArray(res.data.forecast)) {
+        setCo2Forecast(res.data.forecast);
+      } else {
+        setCo2Forecast([]);
+      }
+    } catch (e) {
+      setCo2Forecast([]);
+    }
+  };
+
   useEffect(() => {
     fetchLatest();
     fetchHistory();
+    fetchForecast();
     const id = setInterval(() => {
       fetchLatest();
       fetchHistory();
+      fetchForecast();
     }, 30000); // atualiza a cada 30s
     return () => clearInterval(id);
   }, []);
@@ -135,17 +202,22 @@ export default function DashboardScreen({ onHistorico, onConfiguracoes, onSair }
         </TouchableOpacity>
       </Modal>
 
+      {/* Gráfico de CO₂ - últimas 24h (dados reais, semelhante ao front) */}
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Nível de CO₂ - Últimas 24 horas</Text>
+        <Text style={styles.cardTitle}>Evolução de CO₂ (24 horas)</Text>
         <View style={styles.chartPlaceholder}>
           {co2History.length > 0 ? (
             <LineChart
               data={{
-                labels: co2History.map((val, i) => {
-                  // Mostra label a cada 6 pontos para não poluir o eixo X
-                  return i % 6 === 0 ? String(i) : '';
-                }),
-                datasets: [{ data: co2History.length > 0 ? co2History : [0] }],
+                labels: co2History.map((p, i) =>
+                  i % 6 === 0
+                    ? new Date(p.ts).toLocaleTimeString('pt-BR', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })
+                    : ''
+                ),
+                datasets: [{ data: co2History.map((p) => p.co2) }],
               }}
               width={Dimensions.get('window').width - 60}
               height={180}
@@ -163,49 +235,109 @@ export default function DashboardScreen({ onHistorico, onConfiguracoes, onSair }
               style={{ borderRadius: 8 }}
             />
           ) : (
-            <Text style={styles.chartText}>Carregando dados de CO₂...</Text>
+            <Text style={styles.chartText}>Dados insuficientes nas últimas 24 horas.</Text>
           )}
         </View>
       </View>
 
+      {/* Previsão de CO₂ para as próximas 24h (semelhante ao front, sem IC visual) */}
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Índice de Qualidade do Ar</Text>
+        <Text style={styles.cardTitle}>Previsão de CO₂ para as próximas 24h</Text>
+        <Text style={styles.cardSubtitle}>Projeção baseada em regressão linear</Text>
+        <View style={styles.chartPlaceholder}>
+          {co2Forecast.length > 0 ? (
+            <LineChart
+              data={{
+                labels: co2Forecast.map((p, i) =>
+                  i % 6 === 0
+                    ? new Date(p.ts).toLocaleTimeString('pt-BR', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })
+                    : ''
+                ),
+                datasets: [{ data: co2Forecast.map((p) => p.co2) }],
+              }}
+              width={Dimensions.get('window').width - 60}
+              height={180}
+              chartConfig={{
+                backgroundColor: '#fff',
+                backgroundGradientFrom: '#fff',
+                backgroundGradientTo: '#fff',
+                decimalPlaces: 2,
+                color: (opacity = 1) => `rgba(13, 110, 253, ${opacity})`,
+                labelColor: () => '#333',
+                style: { borderRadius: 8 },
+                propsForDots: { r: '3', strokeWidth: '1', stroke: '#0d6efd' },
+              }}
+              bezier
+              style={{ borderRadius: 8 }}
+            />
+          ) : (
+            <Text style={styles.chartText}>Dados insuficientes para previsão de CO₂.</Text>
+          )}
+        </View>
+      </View>
+
+      {/* Card de AQI semelhante ao front (resumo) */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Índice de Qualidade do Ar (AQI)</Text>
         <View style={styles.aqiCircle}>
           <Text style={styles.aqiValue}>{aqiValue}</Text>
           <Text style={[styles.aqiStatus, { color: aqiInfo.color }]}>{aqiInfo.label}</Text>
         </View>
       </View>
 
+      {/* Cards de composição e métricas rápidas, espelhando o front */}
       <View style={styles.row}>
         <View style={styles.infoBox}>
-          <Text style={styles.infoValue}>{co2Value || '--'}</Text>
+          <Text style={styles.infoLabel}>CO₂ médio (24h)</Text>
+          <Text style={styles.infoValue}>{co2Value ?? '--'}</Text>
           <Text style={styles.infoUnit}>ppm</Text>
-          <Text style={styles.infoLabel}>Nível de CO²</Text>
           <Text style={[styles.infoStatus, { color: co2Info.color }]}>{co2Info.label}</Text>
         </View>
         <View style={styles.infoBox}>
+          <Text style={styles.infoLabel}>VOCs</Text>
           <Text style={styles.infoValue}>{sensorData ? String(sensorData.vocs) : '--'}</Text>
           <Text style={styles.infoUnit}>ppb</Text>
-          <Text style={styles.infoLabel}>TVOC</Text>
         </View>
       </View>
 
       <View style={styles.row}>
         <View style={styles.infoBox}>
+          <Text style={styles.infoLabel}>Temperatura</Text>
           <Text style={styles.infoValue}>{sensorData ? String(sensorData.temperature) : '--'}</Text>
           <Text style={styles.infoUnit}>°C</Text>
-          <Text style={styles.infoLabel}>Temperatura</Text>
         </View>
         <View style={styles.infoBox}>
+          <Text style={styles.infoLabel}>Umidade</Text>
           <Text style={styles.infoValue}>{sensorData ? String(sensorData.humidity) : '--'}</Text>
           <Text style={styles.infoUnit}>%</Text>
-          <Text style={styles.infoLabel}>Umidade</Text>
+        </View>
+      </View>
+
+      {/* Composição de poluentes resumida (sem pizza, mas com percentuais) */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Composição de Poluentes (7 dias)</Text>
+        <View style={styles.compositionRow}>
+          {composition.map((item) => (
+            <View key={item.label} style={styles.compositionItem}>
+              <Text style={styles.compositionLabel}>{item.label}</Text>
+              <Text style={styles.compositionValue}>{item.value}</Text>
+            </View>
+          ))}
         </View>
       </View>
 
       <View style={styles.alertBox}>
         <Text style={styles.alertLabel}>ALERTAS</Text>
-        <Text style={styles.alertText}>CO² está muito alto!</Text>
+        <Text style={styles.alertText}>
+          {co2Value == null
+            ? 'Sem dados suficientes para avaliar o nível de CO₂.'
+            : co2Value > 1000
+              ? 'CO₂ acima do ideal, ventile o ambiente.'
+              : 'CO₂ em nível adequado.'}
+        </Text>
       </View>
 
       <View style={styles.bottomNav}>

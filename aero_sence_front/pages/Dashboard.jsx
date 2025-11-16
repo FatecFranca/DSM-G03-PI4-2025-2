@@ -144,9 +144,13 @@ const Dashboard = () => {
     const fetchForecast = async () => {
       try {
         const response = await api.get('/sensor/forecast-co2');
-        if (response.data && Array.isArray(response.data.forecast) && Array.isArray(response.data.ci)) {
+        if (response.data && Array.isArray(response.data.forecast)) {
           setCo2Forecast(response.data.forecast);
-          setForecastCI(response.data.ci);
+          if (Array.isArray(response.data.ci)) {
+            setForecastCI(response.data.ci);
+          } else {
+            setForecastCI([]);
+          }
         } else {
           setCo2Forecast([]);
           setForecastCI([]);
@@ -173,6 +177,25 @@ const Dashboard = () => {
   const pieChartData = processPieData(history7d);
   const isValidForecast = co2Forecast && co2Forecast.length > 0;
   const isValidCI = forecastCI && forecastCI.length > 0;
+
+  // Agrupamento de CO₂ por hora para gráfico de barras (últimas 24h)
+  const hourlyCo2 = Object.values(
+    co2History.reduce((acc, item) => {
+      const d = new Date(item.ts);
+      const key = d.toLocaleString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        hour: '2-digit',
+      });
+      if (!acc[key]) acc[key] = { label: key, sum: 0, count: 0 };
+      acc[key].sum += item.co2;
+      acc[key].count += 1;
+      return acc;
+    }, {})
+  ).map((grp) => ({
+    label: grp.label,
+    co2: grp.count ? grp.sum / grp.count : 0,
+  }));
 
   return (
     <DashboardErrorBoundary>
@@ -265,41 +288,37 @@ const Dashboard = () => {
                           <YAxis label={{ value: 'ppm', angle: -90, position: 'insideLeft' }} />
                           <Tooltip
                             labelFormatter={(ts) => new Date(ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                            formatter={(value, name, props) => {
+                            formatter={(value, name, { payload }) => {
                               if (name !== 'Previsão CO₂ (próximas 24h)' && name !== 'co2') {
-                                // ignora séries auxiliares no conteúdo, mas deixa o horário
                                 return null;
                               }
-
                               if (typeof value === 'number' && value < 0) value = 0;
-
-                              // Encontrar o intervalo correspondente (upper/lower) para este timestamp
-                              const ts = props && props.payload && props.payload.ts;
-                              let intervalo = null;
-                              if (ts && forecastCI && forecastCI.length) {
-                                const ponto = forecastCI.find(p => p.ts === ts);
-                                if (ponto && typeof ponto.upper === 'number' && typeof ponto.lower === 'number') {
-                                  const mid = (ponto.upper + ponto.lower) / 2;
-                                  intervalo = Math.abs(ponto.upper - mid);
+                              const baseVal = Number(value);
+                              let text = `${baseVal.toFixed(2)} ppm`;
+                              // Procura o ponto correspondente no forecastCI (mesmo ts) para pegar o upper e calcular o erro
+                              if (payload && forecastCI && forecastCI.length > 0 && payload.ts) {
+                                const ciPoint = forecastCI.find(p => p.ts === payload.ts);
+                                if (ciPoint && typeof ciPoint.upper === 'number') {
+                                  const erro = Math.max(0, ciPoint.upper - baseVal);
+                                  if (erro > 0) {
+                                    text = `${baseVal.toFixed(2)} ppm ± ${erro.toFixed(2)} ppm`;
+                                  }
                                 }
                               }
-
-                              const base = `${Number(value).toFixed(2)} ppm`;
-                              if (intervalo !== null) {
-                                return [`${base} ± ${intervalo.toFixed(2)} ppm`, 'Previsão CO₂ (~90% IC)'];
-                              }
-                              return [base, 'Previsão CO₂'];
+                              return [text, 'Previsão CO₂'];
                             }}
                           />
-                          {/* Faixa de IC 99% */}
                           {isValidCI && (
                             <Area
                               type="monotone"
                               dataKey="upper"
-                              data={forecastCI.map(d => ({ ...d, upper: d.upper }))}
+                              data={forecastCI}
+                              name="Intervalo de confiança"
                               fill="#0d6efd"
-                              fillOpacity={0.12}
-                              isAnimationActive={false}
+                              stroke="#0d6efd"
+                              strokeOpacity={0}
+                              fillOpacity={0.15}
+                              activeDot={false}
                             />
                           )}
                           <Line type="monotone" dataKey="co2" name="Previsão CO₂ (próximas 24h)" stroke="#0d6efd" strokeDasharray="6 4" dot={{ r: 5 }} data={co2Forecast} />
@@ -361,43 +380,7 @@ const Dashboard = () => {
               <Col xs={12}>
                 <h4 className="fw-bold text-primary mb-3">Análise das Principais Métricas</h4>
               </Col>
-              <Col lg={6}>
-                <Card className="shadow-sm border-0 h-100">
-                  <Card.Header className="bg-success bg-opacity-10 border-0">
-                    <h6 className="mb-0 fw-semibold text-success">Evolução de CO₂ (24 horas)</h6>
-                  </Card.Header>
-                  <Card.Body>
-                    <ResponsiveContainer width="100%" height={280}>
-                      <LineChart data={co2History}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis
-                          dataKey="ts"
-                          type="number"
-                          scale="time"
-                          domain={['dataMin', 'dataMax']}
-                          tickFormatter={(ts) => {
-                            const d = new Date(ts);
-                            return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-                          }}
-                          minTickGap={30}
-                          label={{ value: 'Horário (últimas 24h)', position: 'insideBottom', offset: -5 }}
-                        />
-                        <YAxis label={{ value: 'CO₂ (ppm)', angle: -90, position: 'insideLeft' }} />
-                        <Tooltip
-                          labelFormatter={(ts) => new Date(ts).toLocaleString('pt-BR')}
-                          formatter={(value) => [value.toFixed(2) + ' ppm', 'CO₂']}
-                        />
-                        <Line type="monotone" dataKey="co2" stroke="#4caf50" strokeWidth={2} name="CO₂ (24h)" dot={{ r: 3 }} />
-                        <Legend formatter={() => 'CO₂ (24h)'} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                    <small className="text-muted d-block mt-2">
-                      <strong>Interpretação:</strong> Acompanhe as variações de CO₂ ao longo das últimas 24 horas. Valores acima de 1000 ppm indicam necessidade de ventilação.
-                    </small>
-                  </Card.Body>
-                </Card>
-              </Col>
-              <Col lg={6}>
+              <Col lg={4}>
                 <Card className="shadow-sm border-0 h-100">
                   <Card.Header className="bg-danger bg-opacity-10 border-0">
                     <h6 className="mb-0 fw-semibold text-danger">Distribuição de Temperatura</h6>
@@ -425,7 +408,7 @@ const Dashboard = () => {
                   </Card.Body>
                 </Card>
               </Col>
-              <Col lg={6}>
+              <Col lg={4}>
                 <Card className="shadow-sm border-0 h-100">
                   <Card.Header className="bg-primary bg-opacity-10 border-0">
                     <h6 className="mb-0 fw-semibold text-primary">Correlação: Temperatura vs Umidade</h6>
@@ -456,7 +439,7 @@ const Dashboard = () => {
                   </Card.Body>
                 </Card>
               </Col>
-              <Col lg={6}>
+              <Col lg={4}>
                 <Card className="shadow-sm border-0 h-100">
                   <Card.Header className="bg-info bg-opacity-10 border-0">
                     <h6 className="mb-0 fw-semibold text-info">Distribuição de Umidade</h6>
