@@ -242,9 +242,9 @@ const Dashboard = () => {
             <Row className="g-4">
               <Col lg={8}>
                 <Card className="h-100 shadow-sm border-0">
-                  <Card.Header className="bg-success bg-opacity-10 border-0">
+                    <Card.Header className="bg-success bg-opacity-10 border-0">
                     <h5 className="mb-0 text-primary fw-semibold"><Activity className="me-2" />Previsão de CO₂ para as próximas 24h</h5>
-                    <div className="text-muted small mb-2">Intervalo de confiança 99% • Projeção baseada em regressão linear</div>
+                    <div className="text-muted small mb-2">Intervalo de confiança ~90% • Projeção baseada em regressão linear</div>
                   </Card.Header>
                   <Card.Body className="p-4">
                     {isValidForecast ? (
@@ -286,7 +286,7 @@ const Dashboard = () => {
 
                               const base = `${Number(value).toFixed(2)} ppm`;
                               if (intervalo !== null) {
-                                return [`${base} ± ${intervalo.toFixed(2)} ppm`, 'Previsão CO₂ (99% IC)'];
+                                return [`${base} ± ${intervalo.toFixed(2)} ppm`, 'Previsão CO₂ (~90% IC)'];
                               }
                               return [base, 'Previsão CO₂'];
                             }}

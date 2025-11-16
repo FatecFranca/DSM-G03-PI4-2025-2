@@ -123,7 +123,7 @@ export const getCo2Forecast = async (req, res) => {
         const sse = residuals.reduce((s, r) => s + r * r, 0);
         const se = Math.sqrt(sse / Math.max(1, n - 2));
 
-        const z = 1.96;
+        const z = 1.28; // ~90% para evitar faixas exageradas
 
         const now = Date.now();
         const lastTs = points[points.length - 1].ts;
@@ -151,8 +151,12 @@ export const getCo2Forecast = async (req, res) => {
                 1 + 1 / n + Math.pow(x - meanX, 2) / (sumXX - n * Math.pow(meanX, 2))
             );
 
-            let upper = y + z * sePred;
-            let lower = y - z * sePred;
+            const erroBruto = z * sePred;
+            const erroMax = Math.max(0.3, meanY * 0.3); // máx 30% da média ou 0.3 ppm
+            const erro = Math.min(erroBruto, erroMax);
+
+            let upper = y + erro;
+            let lower = y - erro;
 
             y = Math.max(0, Math.min(y, maxRealistic));
             upper = Math.max(0, Math.min(upper, maxRealistic));
