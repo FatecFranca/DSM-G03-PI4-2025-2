@@ -3,6 +3,7 @@
 // 1. Organize todas as importações no topo
 import { Router } from 'express';
 import { protect } from '../middleware/authMiddleware.js';
+import { getStatistics } from '../controllers/statsController.js';
 
 // Controladores de Autenticação
 import { register, login, forgotPassword, resetPassword } from '../controllers/authController.js';
@@ -28,6 +29,7 @@ router.post('/auth/reset-password', resetPassword);
 // A rota POST /sensor deve ser pública para que o hardware (ESP32) possa enviar dados.
 router.post('/sensor', createSensorData);
 router.get('/sensor/history', getSensorHistory);
+router.get('/sensor/statistics', getStatistics);
 router.get('/sensor/forecast-co2', getCo2Forecast);
 router.get('/sensor/latest', getLatestSensorData);
 
