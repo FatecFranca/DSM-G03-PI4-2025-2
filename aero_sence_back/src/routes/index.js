@@ -9,7 +9,7 @@ import { getStatistics } from '../controllers/statsController.js';
 import { register, login, forgotPassword, resetPassword } from '../controllers/authController.js';
 
 // Controladores do Sensor
-import { createSensorData, getLatestSensorData, getSensorHistory, getCo2Forecast } from '../controllers/sensorController.js';
+import { createSensorData, getLatestSensorData, getSensorHistory, createSensorBatch, getCo2Forecast } from '../controllers/sensorController.js';
 
 // Controladores do Usuário
 import { getUserProfile, updateUserProfile, deleteUserAccount, changePassword } from '../controllers/userController.js';
@@ -28,6 +28,7 @@ router.post('/auth/reset-password', resetPassword);
 // Rotas do Sensor (CORRIGIDAS)
 // A rota POST /sensor deve ser pública para que o hardware (ESP32) possa enviar dados.
 router.post('/sensor', createSensorData);
+router.post('/sensor/batch', createSensorBatch);
 router.get('/sensor/history', getSensorHistory);
 router.get('/sensor/statistics', getStatistics);
 router.get('/sensor/forecast-co2', getCo2Forecast);
