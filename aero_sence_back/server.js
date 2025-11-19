@@ -7,7 +7,16 @@ const userRoutes = require('./routes/user');
 
 const app = express();
 
-app.use(cors());
+// Configure CORS explicitly to allow the frontend dev origin and handle preflight OPTIONS
+app.use(cors({
+  origin: ['http://localhost:5173', 'http://127.0.0.1:5173'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+}));
+
+// Ensure preflight requests get handled with CORS headers
+app.options('*', cors());
 app.use(express.json());
 
 // Dados de teste

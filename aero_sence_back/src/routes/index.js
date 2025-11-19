@@ -35,6 +35,104 @@ router.get('/sensor/forecast-co2', getCo2Forecast);
 router.get('/sensor/latest', getLatestSensorData);
 
 // Rotas do Usuário (Protegidas)
+/**
+ * @openapi
+ * /api/user/profile:
+ *   get:
+ *     tags:
+ *       - Usuário
+ *     summary: Obtém o perfil do utilizador autenticado
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Perfil do utilizador
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: integer
+ *                 name:
+ *                   type: string
+ *                 email:
+ *                   type: string
+ *       401:
+ *         description: Não autorizado
+ */
+/**
+ * @openapi
+ * /api/user/profile:
+ *   put:
+ *     tags:
+ *       - Usuário
+ *     summary: Atualiza o nome ou e-mail do utilizador (parcial)
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Perfil atualizado
+ *       400:
+ *         description: Nenhum campo para atualizar
+ *       401:
+ *         description: Não autorizado
+ */
+/**
+ * @openapi
+ * /api/user/password:
+ *   put:
+ *     tags:
+ *       - Usuário
+ *     summary: Altera a senha do utilizador
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [currentPassword, newPassword]
+ *             properties:
+ *               currentPassword:
+ *                 type: string
+ *               newPassword:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Senha alterada com sucesso
+ *       400:
+ *         description: Requisição inválida
+ *       401:
+ *         description: Senha atual incorreta / não autorizado
+ */
+/**
+ * @openapi
+ * /api/user/account:
+ *   delete:
+ *     tags:
+ *       - Usuário
+ *     summary: Exclui a conta do utilizador autenticado
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Conta apagada com sucesso
+ *       401:
+ *         description: Não autorizado
+ */
 router.get('/user/profile', protect, getUserProfile);
 router.put('/user/profile', protect, updateUserProfile);
 router.put('/user/password', protect, changePassword);

@@ -86,8 +86,9 @@ const Dashboard = () => {
 
   useEffect(() => {
     const fetchSensorData = async () => {
-      try {
+        try {
         const response = await api.get('/sensor/latest');
+        console.debug('[Dashboard] /sensor/latest response:', response.data);
         if (!response.data || typeof response.data.aqi === 'undefined') {
           console.error('Dados de sensor inválidos:', response.data);
           return;

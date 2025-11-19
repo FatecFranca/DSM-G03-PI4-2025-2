@@ -13,10 +13,35 @@ const options = {
       {
         url: 'http://localhost:5000',
         description: 'Servidor de Desenvolvimento'
+      },
+      {
+        url: 'http://172.203.135.173',
+        description: 'Servidor de Produção (exemplo)'
+      }
+    ],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT'
+        }
+      }
+    },
+    security: [
+      {
+        bearerAuth: []
       }
     ]
   },
-  apis: ['./routes/*.js']
+  // Scan route/controller files (JS/TS) to generate documentation
+  apis: [
+    './routes/*.js',
+    './src/routes/**/*.js',
+    './src/routes/**/*.ts',
+    './src/controllers/**/*.js',
+    './src/controllers/**/*.ts'
+  ]
 };
 
 const specs = swaggerJsdoc(options);

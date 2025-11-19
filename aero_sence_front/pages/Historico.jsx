@@ -77,10 +77,12 @@ const Historico = () => {
             setLoading(true);
             try {
                 const res = await api.get('/sensor/history');
+                console.debug('[Historico] /sensor/history response length:', Array.isArray(res.data) ? res.data.length : 'non-array', res.data && res.data[0]);
                 // Mapear os registros para o formato usado na tabela
                 const mapped = res.data.map((r) => {
                     const d = new Date(r.createdAt || r.date || Date.now());
-                    const date = d.toISOString().slice(0,10);
+                    // Use local date in YYYY-MM-DD format to avoid UTC shift
+                    const date = d.toLocaleDateString('en-CA'); // produces YYYY-MM-DD in local timezone
                     const time = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
                     return {
                         date,
@@ -106,6 +108,61 @@ const Historico = () => {
 
         fetchHistory();
     }, []);
+
+    // Polling to refresh history and statistics periodically (keeps UI near real-time)
+    useEffect(() => {
+        const interval = setInterval(async () => {
+                try {
+                const [hRes, statsRes, stats7Res] = await Promise.all([
+                    api.get('/sensor/history'),
+                    api.get(`/sensor/statistics?period=${filter === 'today' ? '24h' : filter}`),
+                    api.get('/sensor/statistics?period=7d'),
+                ]);
+                    console.debug('[Historico][poll] /sensor/history', Array.isArray(hRes.data) ? hRes.data.length : hRes.data);
+                    console.debug('[Historico][poll] /sensor/statistics', statsRes && statsRes.data);
+
+                const mapped = hRes.data.map((r) => {
+                    const d = new Date(r.createdAt || r.date || Date.now());
+                    const date = d.toLocaleDateString('en-CA');
+                    const time = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                    return {
+                        date,
+                        time,
+                        _ts: d.getTime(),
+                        aqi: r.aqi,
+                        co2: r.co2 != null ? `${r.co2} ppm` : '--',
+                        vocs: r.vocs != null ? `${r.vocs} ppb` : '--',
+                        nox: r.nox != null ? `${r.nox} ppm` : '--',
+                        temperature: r.temperature != null ? `${r.temperature} °C` : '--',
+                        humidity: r.humidity != null ? `${r.humidity} %` : '--',
+                    };
+                });
+
+                setHistoricalData(mapped);
+
+                if (statsRes && statsRes.data) {
+                    setEstatisticas({
+                        co2: statsRes.data.co2,
+                        temperatura: statsRes.data.temperatura,
+                        umidade: statsRes.data.umidade,
+                    });
+                }
+
+                if (stats7Res && stats7Res.data) {
+                    setEstatisticas7d({
+                        co2: stats7Res.data.co2,
+                        temperatura: stats7Res.data.temperatura,
+                        umidade: stats7Res.data.umidade,
+                    });
+                }
+            } catch (err) {
+                // Não interrompe a UI — apenas loga o erro
+                console.error('Polling error (Historico):', err);
+            }
+        }, 15000); // atualiza a cada 15s
+
+        return () => clearInterval(interval);
+    }, [filter]);
 
     // Buscar estatísticas da API baseado no filtro
     // Estatísticas do filtro atual
@@ -171,8 +228,9 @@ const Historico = () => {
     // Pequeno efeito de debug: loga counts por filtro para ajudar a diagnosticar problemas
     useEffect(() => {
         const now = Date.now();
+        const todayStart = new Date(); todayStart.setHours(0,0,0,0);
         const counts = {
-            today: historicalData.filter(r => (r._ts || 0) >= (new Date().setHours(0,0,0,0))).length,
+            today: historicalData.filter(r => (r._ts || 0) >= todayStart.getTime()).length,
             '7d': historicalData.filter(r => (r._ts || 0) >= now - 7 * 24 * 60 * 60 * 1000).length,
             '30d': historicalData.filter(r => (r._ts || 0) >= now - 30 * 24 * 60 * 60 * 1000).length,
             total: historicalData.length,

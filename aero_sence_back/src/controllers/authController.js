@@ -1,7 +1,3 @@
-// Função resetPassword ainda não implementada
-export const resetPassword = async (req, res) => {
-    res.status(501).json({ message: 'resetPassword não implementado.' });
-};
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
@@ -54,13 +50,69 @@ export const forgotPassword = async (req, res) => {
     const { email } = req.body;
     try {
         const user = await prisma.user.findUnique({ where: { email } });
+        // Always return 200 to avoid leaking whether email exists
         if (!user) {
             return res.status(200).json({ message: 'Se um utilizador com esse e-mail existir, um link de recuperação foi enviado.' });
         }
+
+        // Generate token and hashed token to store
         const resetToken = crypto.randomBytes(32).toString('hex');
-        const passwordResetToken = crypto.createHash('sha256').update(resetToken).digest('hex');
-        // ...implementar lógica de envio de e-mail...
+        const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+        const expiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+        // Save hashed token and expiry on user record
+        await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                resetPasswordToken: hashedToken,
+                resetPasswordTokenExpiry: expiry,
+            },
+        });
+
+        // Send email with plain resetToken
+        try {
+            await sendPasswordResetEmail(user.email, resetToken);
+        } catch (mailErr) {
+            console.error('Erro ao enviar e-mail de recuperação:', mailErr);
+            // Do not reveal mail errors to client
+        }
+
+        return res.status(200).json({ message: 'Se um utilizador com esse e-mail existir, um link de recuperação foi enviado.' });
     } catch (error) {
-        res.status(500).json({ message: 'Erro ao processar solicitação de recuperação de senha.' });
+        console.error('forgotPassword error:', error);
+        return res.status(500).json({ message: 'Erro ao processar solicitação de recuperação de senha.' });
+    }
+};
+
+export const resetPassword = async (req, res) => {
+    const { token, newPassword, password } = req.body;
+    const providedPassword = newPassword || password;
+    if (!token || !providedPassword) {
+        return res.status(400).json({ message: 'Token e nova senha são obrigatórios.' });
+    }
+    try {
+        const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+        const user = await prisma.user.findFirst({
+            where: {
+                resetPasswordToken: hashedToken,
+                resetPasswordTokenExpiry: { gt: new Date() },
+            },
+        });
+        if (!user) {
+            return res.status(400).json({ message: 'Token inválido ou expirado.' });
+        }
+        const hashedPassword = await bcrypt.hash(providedPassword, 10);
+        await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                password: hashedPassword,
+                resetPasswordToken: null,
+                resetPasswordTokenExpiry: null,
+            },
+        });
+        return res.status(200).json({ message: 'Senha redefinida com sucesso.' });
+    } catch (error) {
+        console.error('resetPassword error:', error);
+        return res.status(500).json({ message: 'Erro ao redefinir senha.' });
     }
 };

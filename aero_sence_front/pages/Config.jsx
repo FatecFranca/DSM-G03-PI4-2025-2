@@ -4,7 +4,6 @@ import {
   Form,
   Button,
   Modal,
-  Spinner,
   Container,
   Row,
   Col,
@@ -12,7 +11,7 @@ import {
   Tab,
   Alert
 } from 'react-bootstrap';
-import { PersonCircle, ShieldLock, ExclamationTriangleFill } from 'react-bootstrap-icons';
+import { PersonCircle, ExclamationTriangleFill } from 'react-bootstrap-icons';
 import ProfileInputField from '../components/ProfileInputField';
 import NotificationToast from '../components/NotificationToast';
 import { useAuth } from '../src/context/AuthContext';
@@ -21,9 +20,7 @@ import api from '../src/services/api';
 const Config = () => {
   const { logout, updateUser } = useAuth();
   const [user, setUser] = useState({ name: '', email: '' });
-  const [password, setPassword] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [notification, setNotification] = useState({ show: false, message: '', type: 'success' });
   const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
 
@@ -61,36 +58,7 @@ const Config = () => {
     }
   };
 
-  const handlePasswordChange = (e) => {
-    const { name, value } = e.target;
-    setPassword(prev => ({ ...prev, [name]: value }));
-  };
-
-  // Conecta a função de alterar palavra-passe à API
-  const handleUpdatePassword = async (e) => {
-    e.preventDefault();
-    if (password.newPassword !== password.confirmPassword) {
-      showToast('As senhas não coincidem!', 'danger');
-      return;
-    }
-    if (password.newPassword.length < 6) {
-      showToast('A nova senha deve ter pelo menos 6 caracteres.', 'warning');
-      return;
-    }
-    setIsLoading(true);
-    try {
-        await api.put('/user/password', {
-            currentPassword: password.currentPassword,
-            newPassword: password.newPassword,
-        });
-        showToast('Senha alterada com sucesso!');
-        setPassword({ currentPassword: '', newPassword: '', confirmPassword: '' });
-    } catch (error) {
-        showToast(error.response?.data?.message || 'Erro ao alterar a senha.', 'danger');
-    } finally {
-        setIsLoading(false);
-    }
-  };
+  // Aba 'Segurança' removida — alteração de senha não é mostrada aqui
 
   // Conecta a função de apagar conta à API
   const handleConfirmDelete = async () => {
@@ -129,38 +97,7 @@ const Config = () => {
                        <ProfileInputField field="email" label="E-mail" type="email" value={user.email} onSave={handleSaveField} />
                     </div>
                   </Tab>
-                  <Tab eventKey="seguranca" title={<><ShieldLock className="me-2" />Segurança</>}>
-                    <div className="p-4">
-                       <h5 className="mb-3">Alterar Senha</h5>
-                        <Form onSubmit={handleUpdatePassword}>
-                           <Row className="gy-3">
-                            <Col xs={12}>
-                              <Form.Group controlId="currentPassword">
-                                <Form.Label className="fw-medium">Senha Atual</Form.Label>
-                                <Form.Control type="password" name="currentPassword" value={password.currentPassword} onChange={handlePasswordChange} required />
-                              </Form.Group>
-                            </Col>
-                            <Col xs={12}>
-                              <Form.Group controlId="newPassword">
-                                <Form.Label className="fw-medium">Nova Senha</Form.Label>
-                                <Form.Control type="password" name="newPassword" value={password.newPassword} onChange={handlePasswordChange} required />
-                              </Form.Group>
-                            </Col>
-                            <Col xs={12}>
-                              <Form.Group controlId="confirmPassword">
-                                <Form.Label className="fw-medium">Confirmar Nova Senha</Form.Label>
-                                <Form.Control type="password" name="confirmPassword" value={password.confirmPassword} onChange={handlePasswordChange} required />
-                              </Form.Group>
-                            </Col>
-                            <Col xs={12} className="text-end">
-                              <Button variant="primary" type="submit" disabled={isLoading}>
-                                {isLoading ? <><Spinner as="span" animation="border" size="sm" /> Atualizando...</> : 'Atualizar Senha'}
-                              </Button>
-                            </Col>
-                          </Row>
-                        </Form>
-                    </div>
-                  </Tab>
+                  {/* Aba 'Segurança' removida conforme solicitado */}
                   <Tab eventKey="conta" title={<><ExclamationTriangleFill className="me-2" />Conta</>}>
                      <Alert variant="danger" className="m-4">
                         <Alert.Heading><ExclamationTriangleFill className="me-2" />Zona de Perigo</Alert.Heading>
