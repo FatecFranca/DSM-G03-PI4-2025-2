@@ -189,6 +189,11 @@ const Dashboard = () => {
         
         console.log('[Dashboard] Histórico raw recebido:', response.data.length, 'registros');
         console.log('[Dashboard] Primeiro item:', response.data[0]);
+        console.log('[Dashboard] Último item:', response.data[response.data.length - 1]);
+        
+        // Log das datas únicas para debug
+        const uniqueDates = [...new Set(response.data.map(item => item.createdAt ? new Date(item.createdAt).toLocaleDateString('pt-BR') : null))];
+        console.log('[Dashboard] Datas únicas no histórico:', uniqueDates);
         
         const allHistoricalData = response.data.filter(item => item.createdAt).map(item => ({
           ...item,
