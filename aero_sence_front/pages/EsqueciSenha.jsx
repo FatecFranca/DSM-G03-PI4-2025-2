@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 import { Card, Form, Button, Alert, Spinner } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../src/styles/Auth.css'; 
-import logo from '../public/logo.png';
+// import logo from '../public/logo.png'; // Temporariamente desabilitado
+const logo = '/logo.png'; // Usar caminho público
 import { ArrowLeft } from 'react-bootstrap-icons';
 import api from '../src/services/api';
 

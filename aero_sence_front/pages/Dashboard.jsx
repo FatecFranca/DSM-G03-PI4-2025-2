@@ -35,45 +35,10 @@ class DashboardErrorBoundary extends React.Component {
   }
 }
 
-const PIE_COLORS = ['#8884d8', '#82ca9d', '#ffc658'];
 
-// Função para processar médias reais dos poluentes dos últimos 7 dias
-const processPieData = (history) => {
-  if (!history || history.length === 0) return [
-    { name: 'CO₂', value: 1 },
-    { name: 'VOCs', value: 1 },
-    { name: 'NOx', value: 1 }
-  ];
-  let sumCo2 = 0, sumVocsPpb = 0, sumNox = 0, count = 0;
-  history.forEach(item => {
-    sumCo2 += parseFloat(String(item.co2).replace(/[^0-9\.]/g, '')) || 0;
-    sumVocsPpb += parseFloat(String(item.vocs).replace(/[^0-9\.]/g, '')) || 0;
-    sumNox += parseFloat(String(item.nox).replace(/[^0-9eE\.-]/g, '')) || 0;
-    count++;
-  });
-  const avgCo2 = sumCo2 / count;
-  const avgVocs = (sumVocsPpb / count) / 1000;
-  const avgNox = parseFloat((sumNox / count).toFixed(6));
-  let total = avgCo2 + avgVocs + avgNox;
-  let data = [
-    { name: 'CO₂', value: avgCo2 },
-    { name: 'VOCs', value: avgVocs },
-    { name: 'NOx', value: avgNox }
-  ];
-  if (total === 0) total = 1;
-  // Ajuste para garantir soma 100% mesmo com valores pequenos
-  data = data.map(d => ({ ...d, percent: d.value / total }));
-  // Corrigir arredondamento para garantir 100%
-  let percSum = data.reduce((acc, d) => acc + Math.round(d.percent * 10000) / 100, 0);
-  if (percSum !== 100) {
-    // Ajustar o maior valor para compensar diferença
-    let maxIdx = 0;
-    data.forEach((d, i) => { if (d.percent > data[maxIdx].percent) maxIdx = i; });
-    const diff = 100 - percSum;
-    data[maxIdx].percent = Math.round((data[maxIdx].percent * 100 + diff)) / 100;
-  }
-  return data;
-};
+
+// PIE_COLORS movido para antes do componente
+const PIE_COLORS = ['#8884d8', '#82ca9d', '#ffc658'];
 
 const Dashboard = () => {
   const [airQualityData, setAirQualityData] = useState({
@@ -83,6 +48,65 @@ const Dashboard = () => {
   const [co2Forecast, setCo2Forecast] = useState([]);
   const [forecastCI, setForecastCI] = useState([]);
   const [history7d, setHistory7d] = useState([]);
+
+  // Função para processar médias reais dos poluentes - usa TODOS os dados do histórico
+  const processPieData = (history) => {
+    // Usar todos os dados históricos disponíveis, com fallback para history7d se necessário
+    const allData = history7d.length > 0 ? history7d : (history || []);
+    
+    if (!allData || allData.length === 0) return [
+      { name: 'CO₂', value: 1 },
+      { name: 'VOCs', value: 1 },
+      { name: 'NOx', value: 1 }
+    ];
+    
+    console.log('[Dashboard] Processando gráfico de pizza com', allData.length, 'registros históricos');
+    
+    let sumCo2 = 0, sumVocsPpb = 0, sumNox = 0, count = 0;
+    allData.forEach(item => {
+      const co2Val = parseFloat(String(item.co2).replace(/[^0-9\.]/g, '')) || 0;
+      const vocsVal = parseFloat(String(item.vocs).replace(/[^0-9\.]/g, '')) || 0;
+      const noxVal = parseFloat(String(item.nox).replace(/[^0-9eE\.-]/g, '')) || 0;
+      
+      if (co2Val > 0 || vocsVal > 0 || noxVal > 0) {
+        sumCo2 += co2Val;
+        sumVocsPpb += vocsVal;
+        sumNox += noxVal;
+        count++;
+      }
+    });
+    
+    if (count === 0) return [
+      { name: 'CO₂', value: 1 },
+      { name: 'VOCs', value: 1 },
+      { name: 'NOx', value: 1 }
+    ];
+    
+    const avgCo2 = sumCo2 / count;
+    const avgVocs = (sumVocsPpb / count) / 1000; // Converter ppb para proporção
+    const avgNox = parseFloat((sumNox / count).toFixed(6));
+    
+    let total = avgCo2 + avgVocs + avgNox;
+    let data = [
+      { name: 'CO₂', value: avgCo2 },
+      { name: 'VOCs', value: avgVocs },
+      { name: 'NOx', value: avgNox }
+    ];
+    
+    if (total === 0) total = 1;
+    
+    // Calcular percentuais baseados no histórico completo
+    data = data.map(d => ({ ...d, percent: d.value / total }));
+    
+    // Normalizar para somar 100%
+    let percSum = data.reduce((acc, d) => acc + d.percent, 0);
+    if (percSum > 0) {
+      data = data.map(d => ({ ...d, percent: d.percent / percSum }));
+    }
+    
+    console.log('[Dashboard] Composição calculada:', data.map(d => `${d.name}: ${(d.percent * 100).toFixed(1)}%`).join(', '));
+    return data;
+  };
 
   useEffect(() => {
     const fetchSensorData = async () => {
@@ -114,29 +138,41 @@ const Dashboard = () => {
           console.error('Histórico inválido:', response.data);
           return;
         }
-        // Últimos 7 dias para análise real
-        const now = Date.now();
-        const cutoff = now - 7 * 24 * 60 * 60 * 1000;
-        const history7d = response.data.filter(item => {
-          if (!item.createdAt) return false;
-          const ts = new Date(item.createdAt).getTime();
-          return ts >= cutoff && ts <= now;
-        });
-        setHistory7d(history7d);
+        // Carregar TODOS os dados históricos para análise completa
+        const allHistoricalData = response.data.filter(item => item.createdAt).map(item => ({
+          ...item,
+          temperature: item.temperature,
+          humidity: item.humidity,
+          co2: item.co2,
+          vocs: item.vocs,
+          nox: item.nox,
+          createdAt: item.createdAt
+        }));
+        console.log('[Dashboard] Carregados', allHistoricalData.length, 'registros históricos completos');
+        setHistory7d(allHistoricalData); // Renomear seria ideal, mas mantemos compatibilidade
 
         // Gráfico de tendência de CO₂ (últimas 24h - dados reais, sem agregação)
         const startWindow = now - 24 * 60 * 60 * 1000;
         const last24h = response.data.filter(item => {
           if (!item.createdAt) return false;
           const ts = new Date(item.createdAt).getTime();
-          return ts >= startWindow && ts <= now;
+          return !isNaN(ts) && ts >= startWindow && ts <= now;
         });
-        last24h.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-        const chartData = last24h.map(item => ({
-          ts: item.createdAt ? new Date(item.createdAt).getTime() : 0,
-          co2: typeof item.co2 === 'number' ? item.co2 : 0,
-        })).filter(d => d.ts && !isNaN(d.ts));
-        setCo2History(chartData);
+        
+        if (last24h.length > 0) {
+          last24h.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+          const chartData = last24h.map(item => {
+            const ts = new Date(item.createdAt).getTime();
+            const co2 = typeof item.co2 === 'number' ? Math.max(0, item.co2) : 0;
+            return { ts, co2 };
+          }).filter(d => d.ts && !isNaN(d.ts) && !isNaN(d.co2));
+          
+          console.debug('[Dashboard] Dados CO2 processados:', chartData.length, 'pontos');
+          setCo2History(chartData);
+        } else {
+          console.warn('[Dashboard] Nenhum dado válido encontrado nas últimas 24h');
+          setCo2History([]);
+        }
       } catch (error) {
         console.error('Erro ao buscar histórico:', error);
       }
@@ -145,14 +181,24 @@ const Dashboard = () => {
     const fetchForecast = async () => {
       try {
         const response = await api.get('/sensor/forecast-co2');
-        if (response.data && Array.isArray(response.data.forecast)) {
-          setCo2Forecast(response.data.forecast);
-          if (Array.isArray(response.data.ci)) {
-            setForecastCI(response.data.ci);
+        console.debug('[Dashboard] /sensor/forecast-co2 response:', response.data);
+        if (response.data && Array.isArray(response.data.forecast) && response.data.forecast.length > 0) {
+          // Validar se os dados têm formato correto
+          const validForecast = response.data.forecast.filter(item => 
+            item && typeof item.ts === 'number' && typeof item.co2 === 'number' && !isNaN(item.co2)
+          );
+          setCo2Forecast(validForecast);
+          
+          if (Array.isArray(response.data.ci) && response.data.ci.length > 0) {
+            const validCI = response.data.ci.filter(item => 
+              item && typeof item.ts === 'number' && typeof item.upper === 'number' && !isNaN(item.upper)
+            );
+            setForecastCI(validCI);
           } else {
             setForecastCI([]);
           }
         } else {
+          console.warn('[Dashboard] Forecast data inválida ou vazia');
           setCo2Forecast([]);
           setForecastCI([]);
         }
@@ -189,14 +235,16 @@ const Dashboard = () => {
         hour: '2-digit',
       });
       if (!acc[key]) acc[key] = { label: key, sum: 0, count: 0 };
-      acc[key].sum += item.co2;
+      // Garantir que CO₂ seja um número válido
+      const co2Val = typeof item.co2 === 'number' && !isNaN(item.co2) ? item.co2 : 0;
+      acc[key].sum += co2Val;
       acc[key].count += 1;
       return acc;
     }, {})
   ).map((grp) => ({
     label: grp.label,
-    co2: grp.count ? grp.sum / grp.count : 0,
-  }));
+    co2: grp.count ? (grp.sum / grp.count).toFixed(2) : 0,
+  })).filter(item => item.co2 > 0).slice(-12); // Últimas 12 horas com dados
 
   return (
     <DashboardErrorBoundary>
@@ -223,7 +271,7 @@ const Dashboard = () => {
               <Col md={6}>
                 <Card className="h-100 shadow-sm border-0">
                   <Card.Header className="bg-light border-0">
-                    <h5 className="mb-0 fw-semibold text-center">Composição de Poluentes</h5>
+                    <h5 className="mb-0 fw-semibold text-center">Composição de Poluentes (Histórico Completo)</h5>
                   </Card.Header>
                   <Card.Body>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -384,17 +432,33 @@ const Dashboard = () => {
               <Col lg={4}>
                 <Card className="shadow-sm border-0 h-100">
                   <Card.Header className="bg-danger bg-opacity-10 border-0">
-                    <h6 className="mb-0 fw-semibold text-danger">Distribuição de Temperatura</h6>
+                    <h6 className="mb-0 fw-semibold text-danger">Distribuição de Temperatura (Histórico Completo)</h6>
                   </Card.Header>
                   <Card.Body>
                     <ResponsiveContainer width="100%" height={280}>
-                      <BarChart data={[
-                        { faixa: '<28°C', qtd: 25 },
-                        { faixa: '28-29°C', qtd: 68 },
-                        { faixa: '29-30°C', qtd: 142 },
-                        { faixa: '30-31°C', qtd: 89 },
-                        { faixa: '>31°C', qtd: 42 },
-                      ]}>
+                      <BarChart data={(() => {
+                        // Calcular distribuição de temperatura baseada em TODOS os dados do banco
+                        const allData = history7d;
+                        const tempCounts = { '<25°C': 0, '25-26°C': 0, '26-27°C': 0, '27-28°C': 0, '>28°C': 0 };
+                        allData.forEach(item => {
+                          const temp = parseFloat(String(item.temperature || '0').replace(/[^0-9\.]/g, '')) || 0;
+                          if (temp > 0) {
+                            if (temp < 25) tempCounts['<25°C']++;
+                            else if (temp < 26) tempCounts['25-26°C']++;
+                            else if (temp < 27) tempCounts['26-27°C']++;
+                            else if (temp < 28) tempCounts['27-28°C']++;
+                            else tempCounts['>°28°C']++;
+                          }
+                        });
+                        console.log('[Dashboard] Distribuição temperatura calculada com', allData.length, 'registros');
+                        return [
+                          { faixa: '<25°C', qtd: tempCounts['<25°C'] },
+                          { faixa: '25-26°C', qtd: tempCounts['25-26°C'] },
+                          { faixa: '26-27°C', qtd: tempCounts['26-27°C'] },
+                          { faixa: '27-28°C', qtd: tempCounts['27-28°C'] },
+                          { faixa: '>28°C', qtd: tempCounts['>°28°C'] },
+                        ];
+                      })()}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="faixa" label={{ value: 'Faixa de Temperatura', position: 'insideBottom', offset: -5 }} />
                         <YAxis label={{ value: 'Frequência', angle: -90, position: 'insideLeft' }} />
@@ -403,8 +467,8 @@ const Dashboard = () => {
                       </BarChart>
                     </ResponsiveContainer>
                     <small className="text-muted d-block mt-2">
-                      <strong>Interpretação:</strong> Faixa confortável: 18-26°C.
-                      Maior concentração entre 29-30°C indica ambiente quente.
+                      <strong>Interpretação:</strong> Análise de todo o histórico. Faixa ideal: 20-26°C.
+                      Padrão geral mostra estabilidade na temperatura do ambiente.
                     </small>
                   </Card.Body>
                 </Card>
@@ -412,7 +476,7 @@ const Dashboard = () => {
               <Col lg={4}>
                 <Card className="shadow-sm border-0 h-100">
                   <Card.Header className="bg-primary bg-opacity-10 border-0">
-                    <h6 className="mb-0 fw-semibold text-primary">Correlação: Temperatura vs Umidade</h6>
+                    <h6 className="mb-0 fw-semibold text-primary">Correlação: Temperatura vs Umidade (Todos os Dados)</h6>
                   </Card.Header>
                   <Card.Body>
                     <ResponsiveContainer width="100%" height={280}>
@@ -424,18 +488,29 @@ const Dashboard = () => {
                         <Legend />
                         <Scatter
                           name="Leituras"
-                          data={[
-                            { temp: 28.5, hum: 48 }, { temp: 28.8, hum: 47 }, { temp: 29, hum: 46 }, { temp: 29.2, hum: 45.5 }, { temp: 29.5, hum: 45 }, { temp: 29.8, hum: 44 },
-                            { temp: 30, hum: 43 }, { temp: 30.3, hum: 42.5 }, { temp: 30.5, hum: 42 }, { temp: 30.6, hum: 42.2 }, { temp: 30.8, hum: 41.5 },
-                            { temp: 31, hum: 41 }, { temp: 31.2, hum: 40.5 }, { temp: 31.5, hum: 40 }, { temp: 32, hum: 38 }
-                          ].sort((a, b) => a.temp - b.temp)}
+                          data={(() => {
+                            // Usar TODOS os dados de temperatura vs umidade do banco
+                            const allData = history7d;
+                            const correlationData = allData.map(item => {
+                              const temp = parseFloat(String(item.temperature || '0').replace(/[^0-9\.]/g, '')) || 0;
+                              const hum = parseFloat(String(item.humidity || '0').replace(/[^0-9\.]/g, '')) || 0;
+                              return { temp, hum };
+                            }).filter(d => d.temp > 0 && d.hum > 0);
+                            
+                            // Amostrar dados se houver muitos (para performance do gráfico)
+                            const sampleSize = Math.min(100, correlationData.length);
+                            const step = Math.floor(correlationData.length / sampleSize);
+                            const sampledData = correlationData.filter((_, index) => index % Math.max(1, step) === 0);
+                            console.log('[Dashboard] Correlação calculada com', sampledData.length, 'pontos de', allData.length, 'registros');
+                            return sampledData.sort((a, b) => a.temp - b.temp);
+                          })()}
                           fill="#0d6efd"
                         />
                       </ScatterChart>
                     </ResponsiveContainer>
                     <small className="text-muted d-block mt-2">
-                      <strong>Interpretação:</strong> Relação inversa entre temperatura e umidade.
-                      Ar mais quente reduz umidade relativa. Ideal: 40-60%.
+                      <strong>Interpretação:</strong> Correlação de todo o histórico. Padrão mostra
+                      relação estável entre temperatura e umidade no ambiente.
                     </small>
                   </Card.Body>
                 </Card>
@@ -443,17 +518,33 @@ const Dashboard = () => {
               <Col lg={4}>
                 <Card className="shadow-sm border-0 h-100">
                   <Card.Header className="bg-info bg-opacity-10 border-0">
-                    <h6 className="mb-0 fw-semibold text-info">Distribuição de Umidade</h6>
+                    <h6 className="mb-0 fw-semibold text-info">Distribuição de Umidade (Histórico Completo)</h6>
                   </Card.Header>
                   <Card.Body>
                     <ResponsiveContainer width="100%" height={280}>
-                      <BarChart data={[
-                        { faixa: '<30%', qtd: 8 },
-                        { faixa: '30-40%', qtd: 45 },
-                        { faixa: '40-50%', qtd: 178 },
-                        { faixa: '50-60%', qtd: 98 },
-                        { faixa: '>60%', qtd: 37 },
-                      ]}>
+                      <BarChart data={(() => {
+                        // Calcular distribuição de umidade baseada em TODOS os dados do banco
+                        const allData = history7d;
+                        const humCounts = { '<35%': 0, '35-40%': 0, '40-50%': 0, '50-55%': 0, '>55%': 0 };
+                        allData.forEach(item => {
+                          const hum = parseFloat(String(item.humidity || '0').replace(/[^0-9\.]/g, '')) || 0;
+                          if (hum > 0) {
+                            if (hum < 35) humCounts['<35%']++;
+                            else if (hum < 40) humCounts['35-40%']++;
+                            else if (hum < 50) humCounts['40-50%']++;
+                            else if (hum < 55) humCounts['50-55%']++;
+                            else humCounts['>55%']++;
+                          }
+                        });
+                        console.log('[Dashboard] Distribuição umidade calculada com', allData.length, 'registros');
+                        return [
+                          { faixa: '<35%', qtd: humCounts['<35%'] },
+                          { faixa: '35-40%', qtd: humCounts['35-40%'] },
+                          { faixa: '40-50%', qtd: humCounts['40-50%'] },
+                          { faixa: '50-55%', qtd: humCounts['50-55%'] },
+                          { faixa: '>55%', qtd: humCounts['>55%'] },
+                        ];
+                      })()}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="faixa" label={{ value: 'Faixa de Umidade', position: 'insideBottom', offset: -5 }} />
                         <YAxis label={{ value: 'Frequência', angle: -90, position: 'insideLeft' }} />
@@ -462,8 +553,8 @@ const Dashboard = () => {
                       </BarChart>
                     </ResponsiveContainer>
                     <small className="text-muted d-block mt-2">
-                      <strong>Interpretação:</strong> Faixa ideal: 40-60%.
-                      Umidade muito baixa (&lt;30%) pode causar desconforto respiratório.
+                      <strong>Interpretação:</strong> Faixa ideal: 40-55%. Análise histórica completa
+                      mostra padrão de umidade estável no ambiente.
                     </small>
                   </Card.Body>
                 </Card>

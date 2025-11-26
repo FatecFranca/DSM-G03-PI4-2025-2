@@ -3,7 +3,8 @@ import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { Card, Form, Button, Alert, Spinner, InputGroup } from 'react-bootstrap';
 import { Eye, EyeSlash, ArrowLeft } from 'react-bootstrap-icons';
 import '../src/styles/Auth.css';
-import logo from '../public/logo.png';
+// import logo from '../public/logo.png'; // Temporariamente desabilitado
+const logo = '/logo.png'; // Usar caminho público
 import api from '../src/services/api';
 
 const ResetPassword = () => {

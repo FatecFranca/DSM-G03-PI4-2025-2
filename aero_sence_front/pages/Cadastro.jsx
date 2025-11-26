@@ -4,7 +4,8 @@ import { Card, Form, Button, Alert, Spinner, InputGroup, Row, Col } from 'react-
 import { Eye, EyeSlash } from 'react-bootstrap-icons';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../src/styles/Auth.css';
-import logo from '../public/logo.png';
+// import logo from '../public/logo.png'; // Temporariamente desabilitado
+const logo = '/logo.png'; // Usar caminho público
 import api from '../src/services/api';
 
 const Cadastro = () => {

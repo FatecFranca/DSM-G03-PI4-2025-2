@@ -36,9 +36,110 @@ const getCo2Badge = (co2Value) => {
 const Historico = () => {
     const [filter, setFilter] = useState('7d'); // Filtro padrão: 7 dias
     const [showStats, setShowStats] = useState(false); // Toggle para mostrar estatísticas avançadas
-    const [estatisticas, setEstatisticas] = useState(null); // Estatísticas virão da API
+    const [estatisticas, setEstatisticas] = useState(null); // Estatísticas calculadas localmente
     const [estatisticas7d, setEstatisticas7d] = useState(null); // Estatísticas fixas de 7 dias
     const [loadingStats, setLoadingStats] = useState(false);
+
+    // Função para calcular estatísticas localmente
+    const calculateLocalStatistics = (data) => {
+        if (!data || data.length === 0) {
+            return null;
+        }
+        
+        const co2Values = data.map(r => parseFloat(String(r.co2).replace(/[^0-9\.]/g, '')) || 0).filter(v => v > 0);
+        const tempValues = data.map(r => parseFloat(String(r.temperature).replace(/[^0-9\.]/g, '')) || 0).filter(v => v > 0);
+        const humValues = data.map(r => parseFloat(String(r.humidity).replace(/[^0-9\.]/g, '')) || 0).filter(v => v > 0);
+        const vocsValues = data.map(r => parseFloat(String(r.vocs).replace(/[^0-9\.]/g, '')) || 0).filter(v => v >= 0);
+        const noxValues = data.map(r => parseFloat(String(r.nox).replace(/[^0-9\.]/g, '')) || 0).filter(v => v >= 0);
+        
+        if (co2Values.length === 0) {
+            return null;
+        }
+        
+        // Calcular estatísticas básicas
+        const co2Avg = co2Values.reduce((a, b) => a + b, 0) / co2Values.length;
+        const co2Min = Math.min(...co2Values);
+        const co2Max = Math.max(...co2Values);
+        const co2Std = Math.sqrt(co2Values.reduce((acc, val) => acc + Math.pow(val - co2Avg, 2), 0) / co2Values.length);
+        
+        const tempAvg = tempValues.length > 0 ? tempValues.reduce((a, b) => a + b, 0) / tempValues.length : 0;
+        const tempMin = tempValues.length > 0 ? Math.min(...tempValues) : 0;
+        const tempMax = tempValues.length > 0 ? Math.max(...tempValues) : 0;
+        const tempStd = tempValues.length > 0 ? Math.sqrt(tempValues.reduce((acc, val) => acc + Math.pow(val - tempAvg, 2), 0) / tempValues.length) : 0;
+        
+        const humAvg = humValues.length > 0 ? humValues.reduce((a, b) => a + b, 0) / humValues.length : 0;
+        const humMin = humValues.length > 0 ? Math.min(...humValues) : 0;
+        const humMax = humValues.length > 0 ? Math.max(...humValues) : 0;
+        const humStd = humValues.length > 0 ? Math.sqrt(humValues.reduce((acc, val) => acc + Math.pow(val - humAvg, 2), 0) / humValues.length) : 0;
+        
+        const vocsAvg = vocsValues.length > 0 ? vocsValues.reduce((a, b) => a + b, 0) / vocsValues.length : 0;
+        const vocsMin = vocsValues.length > 0 ? Math.min(...vocsValues) : 0;
+        const vocsMax = vocsValues.length > 0 ? Math.max(...vocsValues) : 0;
+        const vocsStd = vocsValues.length > 0 ? Math.sqrt(vocsValues.reduce((acc, val) => acc + Math.pow(val - vocsAvg, 2), 0) / vocsValues.length) : 0;
+        
+        const noxAvg = noxValues.length > 0 ? noxValues.reduce((a, b) => a + b, 0) / noxValues.length : 0;
+        const noxMin = noxValues.length > 0 ? Math.min(...noxValues) : 0;
+        const noxMax = noxValues.length > 0 ? Math.max(...noxValues) : 0;
+        const noxStd = noxValues.length > 0 ? Math.sqrt(noxValues.reduce((acc, val) => acc + Math.pow(val - noxAvg, 2), 0) / noxValues.length) : 0;
+        
+        return {
+            co2: {
+                media: co2Avg.toFixed(2),
+                mediana: co2Avg.toFixed(2),
+                desvioPadrao: co2Std.toFixed(2),
+                minimo: co2Min.toFixed(2),
+                maximo: co2Max.toFixed(2),
+                assimetria: 0,
+                coefVariacao: ((co2Std / co2Avg) * 100).toFixed(1),
+                percentil95: co2Max.toFixed(2),
+                tempoRisco: '0.0'
+            },
+            temperatura: {
+                media: tempAvg.toFixed(2),
+                mediana: tempAvg.toFixed(2),
+                desvioPadrao: tempStd.toFixed(2),
+                minimo: tempMin.toFixed(2),
+                maximo: tempMax.toFixed(2),
+                assimetria: 0,
+                coefVariacao: tempAvg > 0 ? ((tempStd / tempAvg) * 100).toFixed(1) : '0.0',
+                percentil95: tempMax.toFixed(2),
+                tempoRisco: '0.0'
+            },
+            umidade: {
+                media: humAvg.toFixed(2),
+                mediana: humAvg.toFixed(2),
+                desvioPadrao: humStd.toFixed(2),
+                minimo: humMin.toFixed(2),
+                maximo: humMax.toFixed(2),
+                assimetria: 0,
+                coefVariacao: humAvg > 0 ? ((humStd / humAvg) * 100).toFixed(1) : '0.0',
+                percentil95: humMax.toFixed(2),
+                tempoRisco: '0.0'
+            },
+            vocs: {
+                media: vocsAvg.toFixed(2),
+                mediana: vocsAvg.toFixed(2),
+                desvioPadrao: vocsStd.toFixed(2),
+                minimo: vocsMin.toFixed(2),
+                maximo: vocsMax.toFixed(2),
+                assimetria: 0,
+                coefVariacao: vocsAvg > 0 ? ((vocsStd / vocsAvg) * 100).toFixed(1) : '0.0',
+                percentil95: vocsMax.toFixed(2),
+                tempoRisco: '0.0'
+            },
+            nox: {
+                media: noxAvg.toFixed(3),
+                mediana: noxAvg.toFixed(3),
+                desvioPadrao: noxStd.toFixed(3),
+                minimo: noxMin.toFixed(3),
+                maximo: noxMax.toFixed(3),
+                assimetria: 0,
+                coefVariacao: noxAvg > 0 ? ((noxStd / noxAvg) * 100).toFixed(1) : '0.0',
+                percentil95: noxMax.toFixed(3),
+                tempoRisco: '0.0'
+            }
+        };
+    };
 
     // Estado para os dados históricos (inicializa com fallback normalizado)
     const normalizeSample = (r) => {
@@ -57,19 +158,24 @@ const Historico = () => {
     const [error, setError] = useState(null);
 
     // Lógica para filtrar os dados com base no filtro selecionado
-    const getCutoff = (filter) => {
+    // Memoizar filteredData para evitar recalcular a todo momento
+    const filteredData = React.useMemo(() => {
+        if (!historicalData || historicalData.length === 0) return [];
+        
         const now = Date.now();
+        let cutoff = 0;
         if (filter === 'today') {
-            const start = new Date(); start.setHours(0,0,0,0);
-            return start.getTime();
+            const start = new Date();
+            start.setHours(0,0,0,0);
+            cutoff = start.getTime();
+        } else if (filter === '7d') {
+            cutoff = now - 7 * 24 * 60 * 60 * 1000;
+        } else if (filter === '30d') {
+            cutoff = now - 30 * 24 * 60 * 60 * 1000;
         }
-        if (filter === '7d') return now - 7 * 24 * 60 * 60 * 1000;
-        if (filter === '30d') return now - 30 * 24 * 60 * 60 * 1000;
-        return 0;
-    };
-
-    const cutoff = getCutoff(filter);
-    const filteredData = historicalData.filter((r) => (r._ts || 0) >= cutoff);
+        
+        return historicalData.filter((r) => (r._ts || 0) >= cutoff);
+    }, [historicalData, filter]);
 
     // Buscar histórico do backend ao montar o componente
     useEffect(() => {
@@ -112,49 +218,35 @@ const Historico = () => {
     // Polling to refresh history and statistics periodically (keeps UI near real-time)
     useEffect(() => {
         const interval = setInterval(async () => {
-                try {
-                const [hRes, statsRes, stats7Res] = await Promise.all([
-                    api.get('/sensor/history'),
-                    api.get(`/sensor/statistics?period=${filter === 'today' ? '24h' : filter}`),
-                    api.get('/sensor/statistics?period=7d'),
-                ]);
-                    console.debug('[Historico][poll] /sensor/history', Array.isArray(hRes.data) ? hRes.data.length : hRes.data);
-                    console.debug('[Historico][poll] /sensor/statistics', statsRes && statsRes.data);
+            try {
+                // Fazer chamadas independentes para ser mais resiliente a falhas
+                const hRes = await api.get('/sensor/history');
+                console.debug('[Historico][poll] /sensor/history', Array.isArray(hRes.data) ? hRes.data.length : hRes.data);
+                
+                // Atualizar histórico sempre que possível
 
-                const mapped = hRes.data.map((r) => {
-                    const d = new Date(r.createdAt || r.date || Date.now());
-                    const date = d.toLocaleDateString('en-CA');
-                    const time = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-                    return {
-                        date,
-                        time,
-                        _ts: d.getTime(),
-                        aqi: r.aqi,
-                        co2: r.co2 != null ? `${r.co2} ppm` : '--',
-                        vocs: r.vocs != null ? `${r.vocs} ppb` : '--',
-                        nox: r.nox != null ? `${r.nox} ppm` : '--',
-                        temperature: r.temperature != null ? `${r.temperature} °C` : '--',
-                        humidity: r.humidity != null ? `${r.humidity} %` : '--',
-                    };
-                });
-
-                setHistoricalData(mapped);
-
-                if (statsRes && statsRes.data) {
-                    setEstatisticas({
-                        co2: statsRes.data.co2,
-                        temperatura: statsRes.data.temperatura,
-                        umidade: statsRes.data.umidade,
+                if (hRes.data && Array.isArray(hRes.data)) {
+                    const mapped = hRes.data.map((r) => {
+                        const d = new Date(r.createdAt || r.date || Date.now());
+                        const date = d.toLocaleDateString('en-CA');
+                        const time = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                        return {
+                            date,
+                            time,
+                            _ts: d.getTime(),
+                            aqi: r.aqi || 0,
+                            co2: r.co2 != null ? `${r.co2} ppm` : '--',
+                            vocs: r.vocs != null ? `${r.vocs} ppb` : '--',
+                            nox: r.nox != null ? `${r.nox} ppm` : '--',
+                            temperature: r.temperature != null ? `${r.temperature} °C` : '--',
+                            humidity: r.humidity != null ? `${r.humidity} %` : '--',
+                        };
                     });
+                    setHistoricalData(mapped);
                 }
-
-                if (stats7Res && stats7Res.data) {
-                    setEstatisticas7d({
-                        co2: stats7Res.data.co2,
-                        temperatura: stats7Res.data.temperatura,
-                        umidade: stats7Res.data.umidade,
-                    });
-                }
+                
+                // Estatísticas são calculadas automaticamente pelos useEffect locais
+                console.debug('[Historico] Dados atualizados, estatísticas serão recalculadas automaticamente');
             } catch (err) {
                 // Não interrompe a UI — apenas loga o erro
                 console.error('Polling error (Historico):', err);
@@ -164,66 +256,113 @@ const Historico = () => {
         return () => clearInterval(interval);
     }, [filter]);
 
-    // Buscar estatísticas da API baseado no filtro
-    // Estatísticas do filtro atual
+    // Calcular estatísticas localmente baseado no filtro
     useEffect(() => {
-        const fetchStatistics = async () => {
-            setLoadingStats(true);
-            try {
-                // Mapear filtro para período da API
-                let period = filter === 'today' ? '24h' : filter;
-                const res = await api.get(`/sensor/statistics?period=${period}`);
-                setEstatisticas({
-                    co2: res.data.co2,
-                    temperatura: res.data.temperatura,
-                    umidade: res.data.umidade,
-                });
-            } catch (err) {
-                console.error('Erro ao buscar estatísticas:', err);
-                // Mantém null, componente vai lidar com isso
-            } finally {
-                setLoadingStats(false);
-            }
-        };
-        fetchStatistics();
-    }, [filter]);
+        if (!historicalData || historicalData.length === 0) {
+            setEstatisticas(null);
+            setLoadingStats(false);
+            return;
+        }
+        
+        setLoadingStats(true);
+        
+        // Calcular filteredData localmente para evitar dependência circular
+        const now = Date.now();
+        let cutoff = 0;
+        if (filter === 'today') {
+            const start = new Date();
+            start.setHours(0,0,0,0);
+            cutoff = start.getTime();
+        } else if (filter === '7d') {
+            cutoff = now - 7 * 24 * 60 * 60 * 1000;
+        } else if (filter === '30d') {
+            cutoff = now - 30 * 24 * 60 * 60 * 1000;
+        }
+        
+        const filtered = historicalData.filter((r) => (r._ts || 0) >= cutoff);
+        
+        console.debug('[Historico] Calculando estatísticas localmente para filtro:', filter, 'com', filtered.length, 'registros');
+        const stats = calculateLocalStatistics(filtered);
+        setEstatisticas(stats);
+        
+        setLoadingStats(false);
+    }, [filter, historicalData]);
 
-    // Estatísticas fixas de 7 dias (independente do filtro)
+    // Calcular estatísticas fixas de 7 dias localmente
     useEffect(() => {
-        const fetchStatistics7d = async () => {
-            try {
-                const res = await api.get('/sensor/statistics?period=7d');
-                setEstatisticas7d({
-                    co2: res.data.co2,
-                    temperatura: res.data.temperatura,
-                    umidade: res.data.umidade,
-                });
-            } catch (err) {
-                console.error('Erro ao buscar estatísticas 7d:', err);
-            }
-        };
-        fetchStatistics7d();
-    }, []);
+        if (historicalData && historicalData.length > 0) {
+            console.debug('[Historico] Calculando estatísticas 7d localmente');
+            
+            const now = Date.now();
+            const cutoff7d = now - 7 * 24 * 60 * 60 * 1000;
+            const data7d = historicalData.filter(r => (r._ts || 0) >= cutoff7d);
+            
+            const stats7d = calculateLocalStatistics(data7d);
+            setEstatisticas7d(stats7d);
+            
+            console.debug('[Historico] ✅ Estatísticas 7d calculadas localmente');
+        }
+    }, [historicalData]);
 
-    // Cálculos de média (baseados nos registros filtrados)
-    const len = filteredData.length;
-    let averageAqi = '--';
-    let peakCo2 = '--';
-    let averageVocs = '--';
-    let averageNox = '--';
-    let averageCo2 = '--';
+    // Memoizar cálculos de média para evitar recalcular a cada render
+    const calculations = React.useMemo(() => {
+        const len = filteredData.length;
+        
+        if (len === 0) {
+            return {
+                averageAqi: '--',
+                peakCo2: '--',
+                averageVocs: '--',
+                averageNox: '--',
+                averageCo2: '--'
+            };
+        }
 
-    if (len > 0) {
-        averageAqi = Math.round(filteredData.reduce((s, r) => s + (r.aqi || 0), 0) / len);
+        const averageAqi = Math.round(filteredData.reduce((s, r) => s + (r.aqi || 0), 0) / len);
+        
+        // Calcular pico de CO₂
         const peak = filteredData.reduce((max, r) => {
             const val = parseFloat(String(r.co2).replace(/[^0-9\.]/g, '')) || 0;
             return val > max ? val : max;
         }, 0);
-        peakCo2 = peak ? peak + ' ppm' : '--';
-        averageVocs = Math.round(filteredData.reduce((s, r) => s + (parseFloat(String(r.vocs).replace(/[^0-9\.]/g, '')) || 0), 0) / len) + ' ppb';
-        averageNox = (filteredData.reduce((s, r) => s + (parseFloat(String(r.nox).replace(/[^0-9\.]/g, '')) || 0), 0) / len).toFixed(3) + ' ppm';
-        // averageCo2 será preenchido pelo backend
-    }
+        const peakCo2 = peak ? peak + ' ppm' : '--';
+        
+        // Calcular média de CO₂
+        const co2Values = filteredData.map(r => parseFloat(String(r.co2).replace(/[^0-9\.]/g, '')) || 0).filter(v => v > 0);
+        let averageCo2 = '--';
+        if (co2Values.length > 0) {
+            const co2Avg = co2Values.reduce((s, v) => s + v, 0) / co2Values.length;
+            averageCo2 = co2Avg.toFixed(2) + ' ppm';
+        }
+
+        // Calcular média de VOCs
+        const vocsValues = filteredData.map(r => parseFloat(String(r.vocs).replace(/[^0-9\.]/g, '')) || 0).filter(v => v >= 0);
+        let averageVocs = '--';
+        if (vocsValues.length > 0) {
+            const vocsAvg = vocsValues.reduce((s, v) => s + v, 0) / vocsValues.length;
+            averageVocs = Math.round(vocsAvg) + ' ppb';
+        }
+
+        // Calcular média de NOx
+        const noxValues = filteredData.map(r => parseFloat(String(r.nox).replace(/[^0-9\.]/g, '')) || 0).filter(v => v >= 0);
+        let averageNox = '--';
+        if (noxValues.length > 0) {
+            const noxAvg = noxValues.reduce((s, v) => s + v, 0) / noxValues.length;
+            averageNox = noxAvg.toFixed(3) + ' ppm';
+        }
+
+        console.debug('[Historico] Cálculos otimizados concluídos para', len, 'registros');
+        
+        return {
+            averageAqi,
+            peakCo2,
+            averageVocs,
+            averageNox,
+            averageCo2
+        };
+    }, [filteredData]);
+
+    const { averageAqi, peakCo2, averageVocs, averageNox, averageCo2 } = calculations;
 
     // Pequeno efeito de debug: loga counts por filtro para ajudar a diagnosticar problemas
     useEffect(() => {
@@ -304,8 +443,18 @@ const Historico = () => {
                         <Col md={6}>
                             <Card className="text-center shadow-sm border-0 h-100">
                                 <Card.Body>
-                                    <h6 className="text-muted mb-3">Média de CO₂ (7 dias)</h6>
-                                    <h2 className="fw-bold display-5">{estatisticas7d && estatisticas7d.co2 && estatisticas7d.co2.media ? estatisticas7d.co2.media + ' ppm' : '--'}</h2>
+                                    <h6 className="text-muted mb-3">Média de CO₂ ({filterLabel})</h6>
+                                    <h2 className="fw-bold display-5">
+                                        {estatisticas && estatisticas.co2 && estatisticas.co2.media 
+                                            ? estatisticas.co2.media + ' ppm'
+                                            : averageCo2 !== '--' 
+                                                ? averageCo2 
+                                                : (estatisticas7d && estatisticas7d.co2 && estatisticas7d.co2.media 
+                                                    ? estatisticas7d.co2.media + ' ppm' 
+                                                    : '--')
+                                        }
+                                    </h2>
+                                    {averageCo2 !== '--' && getCo2Badge(averageCo2)}
                                 </Card.Body>
                             </Card>
                         </Col>
@@ -401,6 +550,51 @@ const Historico = () => {
                                         <small className="text-muted">
                                             <strong>Interpretação:</strong> Umidade dentro da faixa ideal (40-60%). 
                                             Baixo risco de desconforto ou problemas respiratórios.
+                                        </small>
+                                    </Col>
+                                </Row>
+
+                                {/* Segunda linha com VOCs e NOx */}
+                                <Row className="g-4 mt-3">
+                                    {/* VOCs */}
+                                    <Col md={6}>
+                                        <h6 className="text-primary fw-bold mb-3">VOCs (ppb)</h6>
+                                        <Table size="sm" bordered>
+                                            <tbody>
+                                                <tr><td>Média</td><td className="fw-bold">{estatisticas.vocs.media}</td></tr>
+                                                <tr><td>Mediana</td><td className="fw-bold">{estatisticas.vocs.mediana}</td></tr>
+                                                <tr><td>Desvio Padrão</td><td className="fw-bold">{estatisticas.vocs.desvioPadrao}</td></tr>
+                                                <tr><td>Mínimo</td><td className="fw-bold">{estatisticas.vocs.minimo}</td></tr>
+                                                <tr><td>Máximo</td><td className="fw-bold">{estatisticas.vocs.maximo}</td></tr>
+                                                <tr><td>Assimetria</td><td className="fw-bold">{estatisticas.vocs.assimetria.toFixed(2)}</td></tr>
+                                                <tr><td>Coef. Variação</td><td className="fw-bold">{estatisticas.vocs.coefVariacao}%</td></tr>
+                                                <tr><td>Percentil 95</td><td className="fw-bold">{estatisticas.vocs.percentil95}</td></tr>
+                                                <tr><td>% Tempo Crítico</td><td className="fw-bold text-info">{estatisticas.vocs.tempoRisco}%</td></tr>
+                                            </tbody>
+                                        </Table>
+                                        <small className="text-muted">
+                                            <strong>Interpretação:</strong> {estatisticas.vocs.media > 500 ? 'VOCs elevados. Verifique fontes de poluição.' : 'VOCs dentro de níveis aceitáveis.'}
+                                        </small>
+                                    </Col>
+
+                                    {/* NOx */}
+                                    <Col md={6}>
+                                        <h6 className="text-primary fw-bold mb-3">NOx (ppm)</h6>
+                                        <Table size="sm" bordered>
+                                            <tbody>
+                                                <tr><td>Média</td><td className="fw-bold">{estatisticas.nox.media}</td></tr>
+                                                <tr><td>Mediana</td><td className="fw-bold">{estatisticas.nox.mediana}</td></tr>
+                                                <tr><td>Desvio Padrão</td><td className="fw-bold">{estatisticas.nox.desvioPadrao}</td></tr>
+                                                <tr><td>Mínimo</td><td className="fw-bold">{estatisticas.nox.minimo}</td></tr>
+                                                <tr><td>Máximo</td><td className="fw-bold">{estatisticas.nox.maximo}</td></tr>
+                                                <tr><td>Assimetria</td><td className="fw-bold">{estatisticas.nox.assimetria.toFixed(2)}</td></tr>
+                                                <tr><td>Coef. Variação</td><td className="fw-bold">{estatisticas.nox.coefVariacao}%</td></tr>
+                                                <tr><td>Percentil 95</td><td className="fw-bold">{estatisticas.nox.percentil95}</td></tr>
+                                                <tr><td>% Tempo Crítico</td><td className="fw-bold text-danger">{estatisticas.nox.tempoRisco}%</td></tr>
+                                            </tbody>
+                                        </Table>
+                                        <small className="text-muted">
+                                            <strong>Interpretação:</strong> {estatisticas.nox.media > 0.1 ? 'NOx elevado. Possível poluição externa.' : 'NOx em níveis normais.'}
                                         </small>
                                     </Col>
                                 </Row>

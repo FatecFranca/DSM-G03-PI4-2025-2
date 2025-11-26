@@ -4,7 +4,8 @@ import { Card, Form, Button, Alert, Spinner, InputGroup } from 'react-bootstrap'
 import { Eye, EyeSlash } from 'react-bootstrap-icons';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../src/styles/Auth.css';
-import logo from '../public/logo.png';
+// import logo from '../public/logo.png'; // Temporariamente desabilitado
+const logo = '/logo.png'; // Usar caminho público
 import { useAuth } from '../src/context/AuthContext'; 
 import api from '../src/services/api'; 
 
@@ -78,12 +79,8 @@ const Login = () => {
                 </InputGroup.Text>
               </InputGroup>
             </Form.Group>
-            
-            <div className="text-end">
-                <Link to="/esqueci-senha" className="small auth-link">Esqueci minha senha</Link>
-            </div>
 
-            <Button type="submit" className="w-100 auth-submit-button" disabled={isLoading}>
+            <Button type="submit" className="w-100 auth-submit-button mt-3" disabled={isLoading}>
               {isLoading ? (
                 <>
                   <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" />
