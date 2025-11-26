@@ -9,7 +9,7 @@ import { getStatistics, getDatabaseInfo } from '../controllers/statsController.j
 import { register, login, forgotPassword, resetPassword } from '../controllers/authController.js';
 
 // Controladores do Sensor
-import { createSensorData, getLatestSensorData, getSensorHistory, createSensorBatch, getCo2Forecast } from '../controllers/sensorController.js';
+import { createSensorData, getLatestSensorData, getSensorHistory, createSensorBatch, getCo2Forecast, getTemperatureForecast } from '../controllers/sensorController.js';
 
 // Controladores do Usuário
 import { getUserProfile, updateUserProfile, deleteUserAccount, changePassword } from '../controllers/userController.js';
@@ -33,6 +33,7 @@ router.get('/sensor/history', getSensorHistory);
 router.get('/sensor/statistics', getStatistics);
 router.get('/sensor/database-info', getDatabaseInfo);
 router.get('/sensor/forecast-co2', getCo2Forecast);
+router.get('/sensor/forecast-temperature', getTemperatureForecast);
 router.get('/sensor/latest', getLatestSensorData);
 
 // Rotas do Usuário (Protegidas)

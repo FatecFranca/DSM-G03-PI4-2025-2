@@ -75,7 +75,7 @@ const Dashboard = () => {
     aqi: '55', co2: '450 ppm', vocs: '120 ppb', nox: '0.05 ppm', temperature: '-- °C', humidity: '-- %', lastUpdate: ''
   });
   const [co2History, setCo2History] = useState([]);
-  const [co2Forecast, setCo2Forecast] = useState([]);
+  const [tempForecast, setTempForecast] = useState([]);
   const [forecastCI, setForecastCI] = useState([]);
   const [history7d, setHistory7d] = useState([]);
 
@@ -240,13 +240,13 @@ const Dashboard = () => {
 
     const fetchForecast = async () => {
       try {
-        const response = await api.get('/sensor/forecast-co2');
-        console.debug('[Dashboard] /sensor/forecast-co2 response:', response.data);
+        const response = await api.get('/sensor/forecast-temperature');
+        console.debug('[Dashboard] /sensor/forecast-temperature response:', response.data);
         if (response.data && Array.isArray(response.data.forecast) && response.data.forecast.length > 0) {
           const validForecast = response.data.forecast.filter(item =>
-            item && typeof item.ts === 'number' && typeof item.co2 === 'number' && !isNaN(item.co2)
+            item && typeof item.ts === 'number' && typeof item.temperature === 'number' && !isNaN(item.temperature)
           );
-          setCo2Forecast(validForecast);
+          setTempForecast(validForecast);
 
           if (Array.isArray(response.data.ci) && response.data.ci.length > 0) {
             const validCI = response.data.ci.filter(item =>
@@ -257,12 +257,12 @@ const Dashboard = () => {
             setForecastCI([]);
           }
         } else {
-          setCo2Forecast([]);
+          setTempForecast([]);
           setForecastCI([]);
         }
       } catch (error) {
-        console.error('Erro ao buscar previsão de CO₂:', error);
-        setCo2Forecast([]);
+        console.error('Erro ao buscar previsão de temperatura:', error);
+        setTempForecast([]);
         setForecastCI([]);
       }
     };
@@ -285,7 +285,7 @@ const Dashboard = () => {
   }, [history7d]);
   
   const isHistoryAvailable = co2History && co2History.length > 0;
-  const isValidForecast = co2Forecast && co2Forecast.length > 0;
+  const isValidForecast = tempForecast && tempForecast.length > 0;
   const isValidCI = forecastCI && forecastCI.length > 0;
 
 
@@ -391,9 +391,9 @@ const Dashboard = () => {
             <Row className="g-4 mb-4">
               <Col lg={8}>
                 <Card className="h-100 shadow-sm border-0">
-                  <Card.Header className="bg-success bg-opacity-10 border-0">
-                    <h5 className="mb-0 text-success fw-semibold"><Activity className="me-2" />Previsão de CO₂ (24h)</h5>
-                    <div className="text-muted small mb-2">Projeção da concentração de CO₂ para as próximas 24 horas com intervalo de confiança.</div>
+                  <Card.Header className="bg-danger bg-opacity-10 border-0">
+                    <h5 className="mb-0 text-danger fw-semibold"><Thermometer className="me-2" />Previsão de Temperatura (24h)</h5>
+                    <div className="text-muted small mb-2">Projeção da temperatura para as próximas 24 horas com intervalo de confiança.</div>
                   </Card.Header>
                   <Card.Body className="p-4">
                     {isValidForecast ? (
@@ -405,27 +405,27 @@ const Dashboard = () => {
                             type="number"
                             scale="time"
                             domain={['dataMin', 'dataMax']}
-                            ticks={co2Forecast.map(d => d.ts).filter((_, i) => i % 6 === 0)}
+                            ticks={tempForecast.map(d => d.ts).filter((_, i) => i % 6 === 0)}
                             tickFormatter={timeTickFormatter}
                             minTickGap={30}
                           />
-                          <YAxis label={{ value: 'CO₂ (ppm)', angle: -90, position: 'insideLeft' }} />
+                          <YAxis label={{ value: 'Temperatura (°C)', angle: -90, position: 'insideLeft' }} />
                           <Tooltip
                             labelFormatter={(ts) => new Date(ts).toLocaleString('pt-BR', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short' })}
                             formatter={(value, name, { payload }) => {
                               if (typeof value === 'number' && value < 0) value = 0;
                               const baseVal = Number(value);
-                              let text = `${baseVal.toFixed(2)} ppm`;
+                              let text = `${baseVal.toFixed(1)} °C`;
                               if (payload && forecastCI && forecastCI.length > 0 && payload.ts) {
                                 const ciPoint = forecastCI.find(p => p.ts === payload.ts);
                                 if (ciPoint && typeof ciPoint.upper === 'number' && typeof ciPoint.lower === 'number') {
                                   const range = ciPoint.upper - ciPoint.lower;
                                   if (range > 0) {
-                                    text = `${baseVal.toFixed(2)} ppm (±${(range / 2).toFixed(2)})`;
+                                    text = `${baseVal.toFixed(1)} °C (±${(range / 2).toFixed(1)})`;
                                   }
                                 }
                               }
-                              return [text, 'Previsão CO₂'];
+                              return [text, 'Previsão Temperatura'];
                             }}
                           />
                           {/* Área do Intervalo de Confiança */}
@@ -433,23 +433,23 @@ const Dashboard = () => {
                             <Area
                               type="monotone"
                               dataKey="upper"
-                              data={forecastCI.map(ci => ({ ts: ci.ts, co2: ci.co2, lower: ci.lower, upper: ci.upper }))}
+                              data={forecastCI.map(ci => ({ ts: ci.ts, temperature: ci.temperature, lower: ci.lower, upper: ci.upper }))}
                               name="Intervalo de Confiança"
-                              fill="#198754"
-                              stroke="#198754"
+                              fill="#dc3545"
+                              stroke="#dc3545"
                               strokeOpacity={0}
                               fillOpacity={0.2}
                               activeDot={false}
                             />
                           )}
                           {/* Linha de Previsão */}
-                          <Line type="monotone" dataKey="co2" name="Previsão CO₂" stroke="#198754" strokeWidth={3} strokeDasharray="5 5" dot={{ r: 4, fill: '#198754' }} data={co2Forecast} />
+                          <Line type="monotone" dataKey="temperature" name="Previsão Temperatura" stroke="#dc3545" strokeWidth={3} strokeDasharray="5 5" dot={{ r: 4, fill: '#dc3545' }} data={tempForecast} />
                           <Legend />
                         </LineChart>
                       </ResponsiveContainer>
                     ) : (
                       <div style={{ color: '#888', textAlign: 'center', padding: 40 }}>
-                        Dados insuficientes para previsão de CO₂.
+                        Dados insuficientes para previsão de temperatura.
                       </div>
                     )}
                   </Card.Body>
