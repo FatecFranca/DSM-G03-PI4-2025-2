@@ -116,6 +116,54 @@ void ensureWifi(unsigned long timeoutMs = 10000) {
   }
 }
 
+int calculateAQI(float co2, float vocs, float nox) {
+  
+  int aqi_co2 = 0;
+  int aqi_vocs = 0;
+  int aqi_nox = 0;
+  
+  if (co2 <= 600) {
+    aqi_co2 = map(co2, 400, 600, 0, 50);
+  } else if (co2 <= 1000) {
+    aqi_co2 = map(co2, 600, 1000, 51, 100);
+  } else if (co2 <= 2000) {
+    aqi_co2 = map(co2, 1000, 2000, 101, 150);
+  } else {
+    aqi_co2 = map(co2, 2000, 5000, 151, 300);
+  }
+  
+  // Sub-índice VOCs (baseado em ppb)
+  // Boa: 0-50 (0-220 ppb) | Moderada: 51-100 (220-660) | Insalubre: 101-150 (660-2200) | Ruim: 151+ (2200+)
+  if (vocs <= 220) {
+    aqi_vocs = map(vocs, 0, 220, 0, 50);
+  } else if (vocs <= 660) {
+    aqi_vocs = map(vocs, 220, 660, 51, 100);
+  } else if (vocs <= 2200) {
+    aqi_vocs = map(vocs, 660, 2200, 101, 150);
+  } else {
+    aqi_vocs = map(vocs, 2200, 5000, 151, 300);
+  }
+  
+  // Sub-índice NOx (baseado em ppm)
+  // Boa: 0-50 (0-0.05 ppm) | Moderada: 51-100 (0.05-0.1) | Insalubre: 101-150 (0.1-0.2) | Ruim: 151+ (0.2+)
+  float nox_scaled = nox * 1000; // Converte para escala 0-1000
+  if (nox <= 0.05) {
+    aqi_nox = map(nox_scaled, 0, 50, 0, 50);
+  } else if (nox <= 0.1) {
+    aqi_nox = map(nox_scaled, 50, 100, 51, 100);
+  } else if (nox <= 0.2) {
+    aqi_nox = map(nox_scaled, 100, 200, 101, 150);
+  } else {
+    aqi_nox = map(nox_scaled, 200, 500, 151, 300);
+  }
+  
+  // Retorna o MAIOR sub-índice (pior poluente define o AQI)
+  int aqi_final = max(aqi_co2, max(aqi_vocs, aqi_nox));
+  
+  // Limita entre 0 e 500
+  return constrain(aqi_final, 0, 500);
+}
+
 // ------------ Cálculo MQ-135 (estimativa) ------------
 void calcularEstimativas(int leitura) {
   float Rs = R_LOAD * ((ADC_MAX / (float)leitura) - 1.0);
@@ -129,10 +177,8 @@ void calcularEstimativas(int leitura) {
   vocs_ppb_estimado = gas_concentracao_ppm * 1000.0;
   nox_ppm_estimado  = gas_concentracao_ppm / 100.0;
 
-  if (gas_concentracao_ppm < 500.0)       aqi_estimado = 50;
-  else if (gas_concentracao_ppm < 1000.0) aqi_estimado = 100;
-  else if (gas_concentracao_ppm < 2000.0) aqi_estimado = 150;
-  else                                    aqi_estimado = 200;
+  // Calcula AQI baseado em todos os poluentes
+  aqi_estimado = calculateAQI(co2_ppm_estimado, vocs_ppb_estimado, nox_ppm_estimado);
 }
 
 // ------------ Envio imediato ------------

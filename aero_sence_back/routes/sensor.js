@@ -135,4 +135,25 @@ router.get('/sensor/history', (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/sensor/database-info:
+ *   get:
+ *     summary: Obtém informações completas do banco de dados
+ *     description: Retorna total de registros, primeiro e último registro, contagem por dia e últimos registros
+ *     tags:
+ *       - Sensores
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         description: Número de registros recentes a retornar (padrão 50)
+ *     responses:
+ *       200:
+ *         description: Informações do banco obtidas com sucesso
+ */
+const { getDatabaseInfo } = require('../controllers/databaseController');
+router.get('/sensor/database-info', getDatabaseInfo);
+
 module.exports = router;

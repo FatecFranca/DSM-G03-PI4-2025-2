@@ -3,7 +3,7 @@
 // 1. Organize todas as importações no topo
 import { Router } from 'express';
 import { protect } from '../middleware/authMiddleware.js';
-import { getStatistics } from '../controllers/statsController.js';
+import { getStatistics, getDatabaseInfo } from '../controllers/statsController.js';
 
 // Controladores de Autenticação
 import { register, login, forgotPassword, resetPassword } from '../controllers/authController.js';
@@ -31,6 +31,7 @@ router.post('/sensor', createSensorData);
 router.post('/sensor/batch', createSensorBatch);
 router.get('/sensor/history', getSensorHistory);
 router.get('/sensor/statistics', getStatistics);
+router.get('/sensor/database-info', getDatabaseInfo);
 router.get('/sensor/forecast-co2', getCo2Forecast);
 router.get('/sensor/latest', getLatestSensorData);
 
