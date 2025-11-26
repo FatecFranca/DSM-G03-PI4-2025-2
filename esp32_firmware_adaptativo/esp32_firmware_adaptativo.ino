@@ -173,7 +173,8 @@ void calcularEstimativas(int leitura) {
   float logConcentration = (logRatio - log10(POWER_LAW_A)) / POWER_LAW_B;
   float gas_concentracao_ppm = pow(10, logConcentration);
 
-  co2_ppm_estimado  = gas_concentracao_ppm;
+  // Ajuste de escala: CO₂ real está ~100x menor que o esperado
+  co2_ppm_estimado  = gas_concentracao_ppm * 100.0;  // Corrigido: multiplica por 100
   vocs_ppb_estimado = gas_concentracao_ppm * 1000.0;
   nox_ppm_estimado  = gas_concentracao_ppm / 100.0;
 
