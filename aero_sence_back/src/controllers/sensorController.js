@@ -36,6 +36,7 @@ res.status(500).json({ message: 'Erro ao guardar os dados do sensor.' });
 };
 
 export const getSensorHistory = async (req, res) => {
+<<<<<<< HEAD
 try {
 // Aceita parâmetro opcional 'limit' para limitar resultados
 const limit = req.query.limit ? parseInt(req.query.limit) : undefined;
@@ -54,6 +55,26 @@ const history = await prisma.sensorData.findMany(query);
 } catch (error) {
 res.status(500).json({ message: 'Erro ao buscar o histórico de dados do sensor.' });
 }
+=======
+    try {
+        // Aceita parâmetro opcional 'limit' para limitar resultados
+        const limit = req.query.limit ? parseInt(req.query.limit) : undefined;
+        
+        const query = {
+            orderBy: { createdAt: 'desc' }
+        };
+        
+        // Se limit for fornecido, aplica o limite
+        if (limit && limit > 0) {
+            query.take = limit;
+        }
+        
+        const history = await prisma.sensorData.findMany(query);
+        res.json(history);
+    } catch (error) {
+        res.status(500).json({ message: 'Erro ao buscar o histórico de dados do sensor.' });
+    }
+>>>>>>> parent of ecb1074 (Filtro de outliers aplicado no endpoint de histórico do sensor (JS))
 };
 
 export const getLatestSensorData = async (req, res) => {
