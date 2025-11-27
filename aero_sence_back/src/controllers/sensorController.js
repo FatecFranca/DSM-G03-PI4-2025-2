@@ -46,6 +46,20 @@ export const getSensorHistory = async (req, res) => {
             query.take = limit;
         }
         const history = await prisma.sensorData.findMany(query);
+            // Log detalhado para diagnóstico de datas e timestamps
+            if (history && history.length > 0) {
+                console.log('[getSensorHistory] Registros retornados:', history.slice(0, 5).map(r => ({
+                    id: r.id,
+                    createdAt: r.createdAt,
+                    aqi: r.aqi,
+                    co2: r.co2,
+                    vocs: r.vocs,
+                    nox: r.nox,
+                    temperature: r.temperature,
+                    humidity: r.humidity,
+                    pressure: r.pressure
+                })));
+            }
         res.json(history);
     } catch (error) {
         res.status(500).json({ message: 'Erro ao buscar o histórico de dados do sensor.' });
@@ -321,7 +335,7 @@ export const getTemperatureForecast = async (req, res) => {
             upper = Math.max(0, Math.min(upper, 50));
             lower = Math.max(0, Math.min(lower, 50));
 
-            forecast.push({ ts, temperature: Math.round(y * 100) / 100 });
+            forecast.push({ ts, temperature: Math.rousnd(y * 100) / 100 });
             ci.push({ ts, upper: Math.round(upper * 100) / 100, lower: Math.round(lower * 100) / 100 });
         }
 
