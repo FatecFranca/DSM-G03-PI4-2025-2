@@ -72,7 +72,7 @@ const PIE_COLORS = ['#8884d8', '#82ca9d', '#ffc658'];
 
 const Dashboard = () => {
   const [airQualityData, setAirQualityData] = useState({
-    aqi: '55', co2: '450 ppm', vocs: '120 ppb', nox: '0.05 ppm', temperature: '-- °C', humidity: '-- %', lastUpdate: ''
+    aqi: '55', co2: '450 ppm', vocs: '120 ppb', nox: '0.05 ppm', temperature: '-- °C', humidity: '-- %', pressure: '-- hPa', lastUpdate: ''
   });
   const [co2History, setCo2History] = useState([]);
   const [tempForecast, setTempForecast] = useState([]);
@@ -170,6 +170,7 @@ const Dashboard = () => {
           co2: `${response.data.co2} ppm`,
           temperature: response.data.temperature !== undefined ? `${response.data.temperature} °C` : '-- °C',
           humidity: response.data.humidity !== undefined ? `${response.data.humidity} %` : '-- %',
+          pressure: response.data.pressure !== undefined ? `${response.data.pressure} hPa` : '-- hPa',
           vocs: `${response.data.vocs} ppb`,
           nox: `${response.data.nox} ppm`,
           lastUpdate: new Date(response.data.createdAt).toLocaleTimeString('pt-BR')
@@ -317,183 +318,89 @@ const Dashboard = () => {
       <Container fluid className="py-4 px-3">
         <Row className="justify-content-center">
           <Col xs={12} xl={10}>
-            {/* --- Título da Página --- */}
             <div className="mb-4">
-              <h1 className="display-6 fw-bold text-primary mb-2"><Wind className="me-3" size={40} />Qualidade do Ar</h1>
-              <p className="text-muted mb-0">Monitoramento em tempo real • Última atualização: {airQualityData.lastUpdate}</p>
+              <h1 className="display-6 fw-bold text-primary mb-2" style={{letterSpacing: '1px'}}><span style={{color:'#222'}}>Aero</span> <span style={{color:'#0d6efd'}}>Sense</span></h1>
+              <p className="text-muted mb-0" style={{fontSize:'1.1rem'}}>Monitoramento em tempo real</p>
             </div>
-            
-            {/* --- LINHA SUPERIOR COM AQI e COMPOSIÇÃO --- */}
+
             <Row className="g-4 mb-4">
-              <Col md={6}>
+              <Col md={12}>
                 <Card className="h-100 shadow-sm border-0">
-                  <Card.Header className="bg-light border-0">
-                    <h5 className="mb-0 fw-semibold text-center">Índice de Qualidade do Ar (AQI)</h5>
+                  <Card.Header className="bg-light border-0 text-center">
+                    <h5 className="mb-0 fw-semibold">Índice de Qualidade do Ar (AQI)</h5>
                   </Card.Header>
-                  <Card.Body className="d-flex align-items-center justify-content-center">
-                    {/* AqiGaugeChart é o componente de Medidor (SIMULADO) */}
+                  <Card.Body className="d-flex flex-column align-items-center justify-content-center">
                     <AqiGaugeChart value={parseInt(airQualityData.aqi, 10)} />
-                  </Card.Body>
-                </Card>
-              </Col>
-              <Col md={6}>
-                <Card className="h-100 shadow-sm border-0">
-                  <Card.Header className="bg-light border-0">
-                    <h5 className="mb-0 fw-semibold text-center">Composição de Poluentes (Base Histórica)</h5>
-                  </Card.Header>
-                  <Card.Body>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <ResponsiveContainer width={220} height={200}>
-                        <PieChart>
-                          <Pie
-                            data={pieChartData}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={50}
-                            outerRadius={80}
-                            fill="#8884d8"
-                            paddingAngle={2}
-                            dataKey="value"
-                            label={false}
-                            labelLine={false}
-                          >
-                            {pieChartData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                            ))}
-                          </Pie>
-                          <Tooltip 
-                            formatter={(value, name, { payload }) => {
-                              const unit = name === 'CO₂' ? ' ppm' : (name === 'VOCs' ? ' ppb' : ' ppm');
-                              return [
-                                `${(payload.percent * 100).toFixed(1)}% (Média: ${payload.realValue?.toFixed(2)}${unit})`,
-                                name
-                              ];
-                            }} 
-                          />
-                        </PieChart>
-                      </ResponsiveContainer>
-                      <div style={{ marginLeft: 24, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                        {pieChartData.map((entry, index) => (
-                          <div key={entry.name} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span style={{ width: 16, height: 16, background: PIE_COLORS[index % PIE_COLORS.length], display: 'inline-block', borderRadius: 4 }}></span>
-                            <span style={{ fontWeight: 600 }}>{entry.name}</span>
-                            <span style={{ color: '#444', fontWeight: 500 }}>{(entry.percent * 100).toFixed(1)}%</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
                   </Card.Body>
                 </Card>
               </Col>
             </Row>
 
-            {/* --- SEGUNDA LINHA: PREVISÃO DE CO₂ E MEDIDORES --- */}
             <Row className="g-4 mb-4">
-              <Col lg={8}>
-                <Card className="h-100 shadow-sm border-0">
-                  <Card.Header className="bg-danger bg-opacity-10 border-0">
-                    <h5 className="mb-0 text-danger fw-semibold"><Thermometer className="me-2" />Previsão de Temperatura (24h)</h5>
-                    <div className="text-muted small mb-2">Projeção da temperatura para as próximas 24 horas com intervalo de confiança.</div>
-                  </Card.Header>
-                  <Card.Body className="p-4">
-                    {isValidForecast ? (
-                      <ResponsiveContainer width="100%" height={350}>
-                        <LineChart margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis
-                            dataKey="ts"
-                            type="number"
-                            scale="time"
-                            domain={['dataMin', 'dataMax']}
-                            ticks={tempForecast.map(d => d.ts).filter((_, i) => i % 6 === 0)}
-                            tickFormatter={timeTickFormatter}
-                            minTickGap={30}
-                          />
-                          <YAxis label={{ value: 'Temperatura (°C)', angle: -90, position: 'insideLeft' }} />
-                          <Tooltip
-                            labelFormatter={(ts) => new Date(ts).toLocaleString('pt-BR', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short' })}
-                            formatter={(value, name, { payload }) => {
-                              if (typeof value === 'number' && value < 0) value = 0;
-                              const baseVal = Number(value);
-                              let text = `${baseVal.toFixed(1)} °C`;
-                              if (payload && forecastCI && forecastCI.length > 0 && payload.ts) {
-                                const ciPoint = forecastCI.find(p => p.ts === payload.ts);
-                                if (ciPoint && typeof ciPoint.upper === 'number' && typeof ciPoint.lower === 'number') {
-                                  const range = ciPoint.upper - ciPoint.lower;
-                                  if (range > 0) {
-                                    text = `${baseVal.toFixed(1)} °C (±${(range / 2).toFixed(1)})`;
-                                  }
-                                }
-                              }
-                              return [text, 'Previsão Temperatura'];
-                            }}
-                          />
-                          {/* Área do Intervalo de Confiança */}
-                          {isValidCI && (
-                            <Area
-                              type="monotone"
-                              dataKey="upper"
-                              data={forecastCI.map(ci => ({ ts: ci.ts, temperature: ci.temperature, lower: ci.lower, upper: ci.upper }))}
-                              name="Intervalo de Confiança"
-                              fill="#dc3545"
-                              stroke="#dc3545"
-                              strokeOpacity={0}
-                              fillOpacity={0.2}
-                              activeDot={false}
-                            />
-                          )}
-                          {/* Linha de Previsão */}
-                          <Line type="monotone" dataKey="temperature" name="Previsão Temperatura" stroke="#dc3545" strokeWidth={3} strokeDasharray="5 5" dot={{ r: 4, fill: '#dc3545' }} data={tempForecast} />
-                          <Legend />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    ) : (
-                      <div style={{ color: '#888', textAlign: 'center', padding: 40 }}>
-                        Dados insuficientes para previsão de temperatura.
-                      </div>
-                    )}
+              <Col md={4}>
+                <Card className="shadow-sm border-0 mb-3">
+                  <Card.Body className="d-flex flex-column align-items-center justify-content-center p-3">
+                    <div className="d-flex align-items-center mb-2">
+                      <Thermometer className="text-danger me-2" size={22} />
+                      <span className="fw-semibold">Temperatura</span>
+                    </div>
+                    <h4 className="mb-0 fw-bold">{airQualityData.temperature}</h4>
                   </Card.Body>
                 </Card>
               </Col>
+              <Col md={4}>
+                <Card className="shadow-sm border-0 mb-3">
+                  <Card.Body className="d-flex flex-column align-items-center justify-content-center p-3">
+                    <div className="d-flex align-items-center mb-2">
+                      <Droplet className="text-primary me-2" size={22} />
+                      <span className="fw-semibold">Umidade</span>
+                    </div>
+                    <h4 className="mb-0 fw-bold">{airQualityData.humidity}</h4>
+                  </Card.Body>
+                </Card>
+              </Col>
+              <Col md={4}>
+                <Card className="shadow-sm border-0 mb-3">
+                  <Card.Body className="d-flex flex-column align-items-center justify-content-center p-3">
+                    <div className="d-flex align-items-center mb-2">
+                      <CloudHaze className="text-info me-2" size={22} />
+                      <span className="fw-semibold">Pressão</span>
+                    </div>
+                    <h4 className="mb-0 fw-bold">{airQualityData.pressure}</h4>
+                  </Card.Body>
+                </Card>
+              </Col>
+            </Row>
 
-              <Col lg={4}>
-                {/* Cards de Medidores - Mantidos do original */}
-                <div className="d-flex flex-column justify-content-between h-100">
-                  <div className="d-flex gap-3 mb-3">
-                    <Card className="flex-fill shadow-sm border-0">
-                      <Card.Body className="d-flex flex-column justify-content-center p-3 text-center">
-                        <div><Thermometer className="text-danger" size={20} /><h6 className="mb-0 fw-semibold d-inline-block ms-2">Temperatura</h6></div>
-                        <h4 className="mb-0 fw-bold mt-2">{airQualityData.temperature}</h4>
-                      </Card.Body>
-                    </Card>
-                    <Card className="flex-fill shadow-sm border-0">
-                      <Card.Body className="d-flex flex-column justify-content-center p-3 text-center">
-                        <div><Droplet className="text-primary" size={20} /><h6 className="mb-0 fw-semibold d-inline-block ms-2">Umidade</h6></div>
-                        <h4 className="mb-0 fw-bold mt-2">{airQualityData.humidity}</h4>
-                      </Card.Body>
-                    </Card>
-                  </div>
-                  <Card className="shadow-sm border-0 flex-grow-1">
-                    <Card.Body className="d-flex flex-column justify-content-center p-4">
-                      <div><CloudHaze className="text-secondary" size={24} /><h6 className="mb-0 fw-semibold d-inline-block ms-2">Dióxido de Carbono (CO₂)</h6></div>
-                      <h3 className="mb-0 fw-bold mt-3">{airQualityData.co2}</h3>
-                    </Card.Body>
-                  </Card>
-                  <div className="my-2"></div>
-                  <Card className="shadow-sm border-0 flex-grow-1">
-                    <Card.Body className="d-flex flex-column justify-content-center p-4">
-                      <div><Droplet className="text-warning" size={24} /><h6 className="mb-0 fw-semibold d-inline-block ms-2">Compostos Orgânicos (VOCs)</h6></div>
-                      <h3 className="mb-0 fw-bold mt-3">{airQualityData.vocs}</h3>
-                    </Card.Body>
-                  </Card>
-                  <div className="my-2"></div>
-                  <Card className="shadow-sm border-0 flex-grow-1">
-                    <Card.Body className="d-flex flex-column justify-content-center p-4">
-                      <div><CloudHaze className="text-danger" size={24} /><h6 className="mb-0 fw-semibold d-inline-block ms-2">NOx / Fumaça / Partículas</h6></div>
-                      <h3 className="mb-0 fw-bold mt-3">{airQualityData.nox}</h3>
-                    </Card.Body>
-                  </Card>
-                </div>
+            <Row className="g-4 mb-4">
+              <Col md={12}>
+                <Card className="shadow-sm border-0 mb-3">
+                  <Card.Body className="d-flex flex-column align-items-center justify-content-center p-3">
+                    <div className="d-flex align-items-center mb-2">
+                      <CloudHaze className="text-secondary me-2" size={22} />
+                      <span className="fw-semibold">Dióxido de Carbono (CO₂)</span>
+                    </div>
+                    <h4 className="mb-0 fw-bold">{airQualityData.co2}</h4>
+                  </Card.Body>
+                </Card>
+                <Card className="shadow-sm border-0 mb-3">
+                  <Card.Body className="d-flex flex-column align-items-center justify-content-center p-3">
+                    <div className="d-flex align-items-center mb-2">
+                      <Droplet className="text-warning me-2" size={22} />
+                      <span className="fw-semibold">Compostos Orgânicos (VOCs)</span>
+                    </div>
+                    <h4 className="mb-0 fw-bold">{airQualityData.vocs}</h4>
+                  </Card.Body>
+                </Card>
+                <Card className="shadow-sm border-0 mb-3">
+                  <Card.Body className="d-flex flex-column align-items-center justify-content-center p-3">
+                    <div className="d-flex align-items-center mb-2">
+                      <CloudHaze className="text-danger me-2" size={22} />
+                      <span className="fw-semibold">NOx / Fumaça / Partículas</span>
+                    </div>
+                    <h4 className="mb-0 fw-bold">{airQualityData.nox}</h4>
+                  </Card.Body>
+                </Card>
               </Col>
             </Row>
 
