@@ -21,12 +21,13 @@ model User {
 }
 
 model SensorData {
-  id            Int       @id @default(autoincrement())
-  aqi           Int      
-  co2           Float 
-  vocs          Float     
-  nox           Float     
-  temperature   Float     
-  humidity      Float     
-  createdAt     DateTime  @default(now())
+  id           Int      @id @default(autoincrement())
+  temperature  Float
+  humidity     Float
+  pressure     Float?
+  aqi          Float
+  co2          Float
+  vocs         Float
+  nox          Float
+  createdAt    DateTime @default(now())
 }
