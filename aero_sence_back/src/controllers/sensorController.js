@@ -47,6 +47,11 @@ export const getSensorHistory = async (req, res) => {
         }
         // Retorna todos os registros, sem filtro de outliers
         const history = await prisma.sensorData.findMany(query);
+        // Log para diagnóstico: mostra datas e valores dos 20 registros mais antigos e mais recentes
+        if (history && history.length > 0) {
+            console.log('[getSensorHistory] 5 mais recentes:', history.slice(0, 5).map(r => ({ id: r.id, createdAt: r.createdAt, aqi: r.aqi, co2: r.co2 })));
+            console.log('[getSensorHistory] 5 mais antigos:', history.slice(-5).map(r => ({ id: r.id, createdAt: r.createdAt, aqi: r.aqi, co2: r.co2 })));
+        }
         res.json(history);
     } catch (error) {
         res.status(500).json({ message: 'Erro ao buscar o histórico de dados do sensor.' });
