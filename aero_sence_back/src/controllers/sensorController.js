@@ -2,7 +2,7 @@ import prisma from '../services/prisma.js';
 
 export const createSensorData = async (req, res) => {
     // Campos esperados: 4 de gás/qualidade + 2 de ambiente
-    const { aqi, co2, vocs, nox, temperature, humidity } = req.body;
+    const { aqi, co2, vocs, nox, temperature, humidity, pressure } = req.body;
 
     // 1. Validação de TODOS os campos obrigatórios
     if (aqi === undefined || co2 === undefined || vocs === undefined || nox === undefined || temperature === undefined || humidity === undefined) {
@@ -22,6 +22,7 @@ export const createSensorData = async (req, res) => {
                 nox: Number(nox),
                 temperature: Number(temperature),
                 humidity: Number(humidity),
+                pressure: pressure !== undefined ? Number(pressure) : null,
                 // mq135RawValue foi removido do modelo final do ESP32/Prisma
             },
         });
@@ -91,6 +92,7 @@ export const createSensorBatch = async (req, res) => {
             nox: Number(r.nox),
             temperature: Number(r.temperature),
             humidity: Number(r.humidity),
+            pressure: r.pressure !== undefined ? Number(r.pressure) : null,
             createdAt: r.createdAt ? new Date(r.createdAt) : undefined,
         }));
 
