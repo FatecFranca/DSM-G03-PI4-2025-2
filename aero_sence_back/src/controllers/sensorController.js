@@ -12,6 +12,8 @@ export const createSensorData = async (req, res) => {
     }
 
     try {
+        // Log para depuração: mostrar todos os dados recebidos
+        console.log('Dados recebidos do sensor:', req.body);
         // 2. Criação do registro no banco de dados com todos os 6 campos
         const newSensorData = await prisma.sensorData.create({
             data: {
