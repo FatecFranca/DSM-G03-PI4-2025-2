@@ -39,18 +39,24 @@ export const getSensorHistory = async (req, res) => {
     try {
         // Aceita parâmetro opcional 'limit' para limitar resultados
         const limit = req.query.limit ? parseInt(req.query.limit) : undefined;
-        
         const query = {
             orderBy: { createdAt: 'desc' }
         };
-        
-        // Se limit for fornecido, aplica o limite
         if (limit && limit > 0) {
             query.take = limit;
         }
-        
         const history = await prisma.sensorData.findMany(query);
-        res.json(history);
+        // Filtra outliers: valores fora dos limites realistas
+        const filtered = history.filter(r =>
+            r.aqi <= 600 && r.aqi >= 0 &&
+            r.co2 <= 1000 && r.co2 >= 0 &&
+            r.vocs <= 1000 && r.vocs >= 0 &&
+            r.nox <= 1 && r.nox >= 0 &&
+            r.temperature <= 40 && r.temperature >= -10 &&
+            r.humidity <= 100 && r.humidity >= 0 &&
+            (r.pressure === null || (r.pressure <= 1100 && r.pressure >= 800))
+        );
+        res.json(filtered);
     } catch (error) {
         res.status(500).json({ message: 'Erro ao buscar o histórico de dados do sensor.' });
     }
