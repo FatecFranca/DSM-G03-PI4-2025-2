@@ -45,21 +45,8 @@ export const getSensorHistory = async (req, res) => {
         if (limit && limit > 0) {
             query.take = limit;
         }
+        // Retorna todos os registros, sem filtro de outliers
         const history = await prisma.sensorData.findMany(query);
-            // Log detalhado para diagnóstico de datas e timestamps
-            if (history && history.length > 0) {
-                console.log('[getSensorHistory] Registros retornados:', history.slice(0, 5).map(r => ({
-                    id: r.id,
-                    createdAt: r.createdAt,
-                    aqi: r.aqi,
-                    co2: r.co2,
-                    vocs: r.vocs,
-                    nox: r.nox,
-                    temperature: r.temperature,
-                    humidity: r.humidity,
-                    pressure: r.pressure
-                })));
-            }
         res.json(history);
     } catch (error) {
         res.status(500).json({ message: 'Erro ao buscar o histórico de dados do sensor.' });
