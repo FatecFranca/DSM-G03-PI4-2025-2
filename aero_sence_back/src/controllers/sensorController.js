@@ -46,17 +46,7 @@ export const getSensorHistory = async (req, res) => {
             query.take = limit;
         }
         const history = await prisma.sensorData.findMany(query);
-        // Filtro de outliers: permite apenas AQI até 60
-        const filtered = history.filter(r =>
-            r.aqi <= 60 && r.aqi >= 0 &&
-            r.co2 <= 2000 && r.co2 >= 0 &&
-            r.vocs <= 1000 && r.vocs >= 0 &&
-            r.nox <= 1 && r.nox >= 0 &&
-            r.temperature <= 50 && r.temperature >= -10 &&
-            r.humidity <= 100 && r.humidity >= 0 &&
-            (r.pressure === null || (r.pressure <= 1100 && r.pressure >= 800))
-        );
-        res.json(filtered);
+        res.json(history);
     } catch (error) {
         res.status(500).json({ message: 'Erro ao buscar o histórico de dados do sensor.' });
     }
