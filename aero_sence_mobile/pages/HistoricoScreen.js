@@ -1,11 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, Platform } from 'react-native';
-import { LineChart } from 'react-native-chart-kit';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform } from 'react-native';
 import api from '../src/services/api';
 
 export default function HistoricoScreen({ onDashboard, onConfiguracoes }) {
-  const [periodo, setPeriodo] = useState('dia');
-  const [aba, setAba] = useState('grafico'); // 'grafico' ou 'estatisticas'
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -52,7 +49,9 @@ export default function HistoricoScreen({ onDashboard, onConfiguracoes }) {
     (async () => {
       try {
         const res = await api.get('/sensor/history');
-        setHistory(res.data.reverse());
+        // Ordena do mais recente para o mais antigo, parecido com a lista do front
+        const arr = Array.isArray(res.data) ? [...res.data].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)) : [];
+        setHistory(arr);
       } catch (e) {
         setHistory([]);
       } finally {
@@ -61,92 +60,53 @@ export default function HistoricoScreen({ onDashboard, onConfiguracoes }) {
     })();
   }, []);
 
-  // Prepara dados para o gráfico
-  const chartData = {
-    labels: history.length > 0 ? history.map((d, i) => i % 6 === 0 ? new Date(d.createdAt).getHours() + 'h' : '') : [],
-    datasets: [
-      {
-        data: history.map(d => d.aqi),
-        color: () => '#53b7c8',
-        strokeWidth: 2,
-      },
-    ],
-  };
-
   return (
     <View style={styles.container}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
-      <Text style={styles.header}>Histórico</Text>
-      <Text style={styles.subtitle}>MONITORAMENTO DE QUALIDADE DO AR</Text>
+      <Text style={styles.header}>Histórico de Leituras</Text>
+      <Text style={styles.subtitle}>LISTA DAS ÚLTIMAS MEDIÇÕES DO SENSOR</Text>
 
-      {/* Abas */}
-      <View style={styles.abaRow}>
-        <TouchableOpacity
-          style={[styles.abaBtn, aba === 'grafico' && styles.abaBtnAtivo]}
-          onPress={() => setAba('grafico')}
-        >
-          <Text style={[styles.abaBtnText, aba === 'grafico' && styles.abaBtnTextAtivo]}>Gráfico</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.abaBtn, aba === 'estatisticas' && styles.abaBtnAtivo]}
-          onPress={() => setAba('estatisticas')}
-        >
-          <Text style={[styles.abaBtnText, aba === 'estatisticas' && styles.abaBtnTextAtivo]}>Estatísticas</Text>
-        </TouchableOpacity>
+      {/* Lista de registros, similar ao histórico de dados do front */}
+      <View style={styles.card}>
+        {loading ? (
+          <Text style={styles.chartText}>Carregando histórico...</Text>
+        ) : history.length === 0 ? (
+          <Text style={styles.chartText}>Sem registros para exibir.</Text>
+        ) : (
+          history.map((item) => (
+            <View key={item.id || item.createdAt} style={styles.historyRow}>
+              <View style={styles.historyColLeft}>
+                <Text style={styles.historyDate}>
+                  {item.createdAt
+                    ? new Date(item.createdAt).toLocaleDateString('pt-BR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: '2-digit',
+                      })
+                    : '--'}
+                </Text>
+                <Text style={styles.historyTime}>
+                  {item.createdAt
+                    ? new Date(item.createdAt).toLocaleTimeString('pt-BR', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })
+                    : ''}
+                </Text>
+              </View>
+              <View style={styles.historyColRight}>
+                <Text style={styles.historyMetric}>AQI: <Text style={styles.historyMetricValue}>{item.aqi ?? '--'}</Text></Text>
+                <Text style={styles.historyMetric}>CO₂: <Text style={styles.historyMetricValue}>{item.co2 ?? '--'} ppm</Text></Text>
+                <Text style={styles.historyMetric}>Temp: <Text style={styles.historyMetricValue}>{item.temperature ?? '--'}°C</Text></Text>
+                <Text style={styles.historyMetric}>Umidade: <Text style={styles.historyMetricValue}>{item.humidity ?? '--'}%</Text></Text>
+              </View>
+            </View>
+          ))
+        )}
       </View>
 
-      {/* Conteúdo por aba */}
-      {aba === 'grafico' ? (
-        <View style={styles.card}>
-          <View style={styles.chartPlaceholder}>
-            {loading ? (
-              <Text style={styles.chartText}>Carregando gráfico...</Text>
-            ) : history.length > 0 ? (
-              <LineChart
-                data={chartData}
-                width={Dimensions.get('window').width - 60}
-                height={180}
-                chartConfig={{
-                  backgroundColor: '#fff',
-                  backgroundGradientFrom: '#fff',
-                  backgroundGradientTo: '#fff',
-                  decimalPlaces: 0,
-                  color: (opacity = 1) => `rgba(83, 183, 200, ${opacity})`,
-                  labelColor: () => '#333',
-                  style: { borderRadius: 8 },
-                  propsForDots: { r: '2', strokeWidth: '1', stroke: '#53b7c8' },
-                }}
-                bezier
-                style={{ borderRadius: 8 }}
-              />
-            ) : (
-              <Text style={styles.chartText}>Sem dados para exibir.</Text>
-            )}
-          </View>
-          <View style={styles.periodoRow}>
-            <TouchableOpacity
-              style={[styles.periodoBtn, periodo === 'dia' && styles.periodoBtnAtivo]}
-              onPress={() => setPeriodo('dia')}
-            >
-              <Text style={[styles.periodoBtnText, periodo === 'dia' && styles.periodoBtnTextAtivo]}>Dia</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.periodoBtn}
-              onPress={() => setPeriodo('semana')}
-            >
-              <Text style={styles.periodoBtnText}>Semana</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.periodoBtn}
-              onPress={() => setPeriodo('mes')}
-            >
-              <Text style={styles.periodoBtnText}>Mês</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      ) : (
-        <>
-          {/* Card CO₂ */}
+        {/* Estatísticas resumidas abaixo, mantendo os cards existentes */}
+        {/* Card CO₂ */}
           <View style={styles.card}>
             <Text style={styles.metricTitle}>CO₂ (ppm)</Text>
             <View style={styles.statRow}>
@@ -253,11 +213,9 @@ export default function HistoricoScreen({ onDashboard, onConfiguracoes }) {
             </View>
             <View style={styles.statRow}>
               <Text style={styles.statLabel}>% Tempo Crítico:</Text>
-              <Text style={styles.statValue}>{estatisticas.umidade.tempoRisco}%</Text>
-            </View>
-          </View>
-        </>
-      )}
+                  <Text style={styles.statValue}>{estatisticas.umidade.tempoRisco}%</Text>
+                </View>
+              </View>
       </ScrollView>
       <View style={[styles.bottomNav, { height: 64 + bottomInset, paddingBottom: bottomInset }]}>
         <TouchableOpacity style={styles.navItem}>
@@ -301,33 +259,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     marginLeft: 16,
   },
-  abaRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginBottom: 16,
-    marginTop: 8,
-  },
-  abaBtn: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 24,
-    marginHorizontal: 6,
-  },
-  abaBtnAtivo: {
-    backgroundColor: '#53b7c8',
-    borderColor: '#53b7c8',
-  },
-  abaBtnText: {
-    color: '#222',
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-  abaBtnTextAtivo: {
-    color: '#fff',
-  },
+  /* estilos de abas antigos removidos (não há mais abas) */
   card: {
     backgroundColor: '#fff',
     borderRadius: 10,
@@ -341,6 +273,36 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e0e0e0',
     alignItems: 'center',
+  },
+  historyRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    paddingVertical: 10,
+  },
+  historyColLeft: {
+    width: '30%',
+  },
+  historyColRight: {
+    width: '68%',
+  },
+  historyDate: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  historyTime: {
+    fontSize: 12,
+    color: '#777',
+  },
+  historyMetric: {
+    fontSize: 12,
+    color: '#555',
+  },
+  historyMetricValue: {
+    fontWeight: 'bold',
+    color: '#222',
   },
   metricTitle: {
     fontSize: 18,

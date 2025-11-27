@@ -542,6 +542,7 @@ const Dashboard = () => {
                     <small className="text-muted d-block mt-2">
                       <strong>Interpretação:</strong> Frequência de ocorrência de cada faixa de temperatura.
                     </small>
+       
                   </Card.Body>
                 </Card>
               </Col>
